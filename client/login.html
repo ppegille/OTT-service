@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OTT Login</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .login-container {
+            background: white;
+            padding: 50px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 400px;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo h1 {
+            color: #667eea;
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .logo p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+
+        input[type="text"]:focus,
+        input[type="password"]:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        input[type="text"]::placeholder,
+        input[type="password"]::placeholder {
+            color: #999;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .info-text {
+            text-align: center;
+            margin-top: 20px;
+            color: #666;
+            font-size: 13px;
+        }
+
+        .features {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .features h3 {
+            color: #333;
+            font-size: 14px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .feature-list {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .feature-item::before {
+            content: "✓";
+            color: #667eea;
+            font-weight: bold;
+            margin-right: 8px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">
+            <h1>🎬 OTT</h1>
+            <p>Video Streaming Platform</p>
+        </div>
+
+        <form method="POST" action="/login" id="loginForm">
+            <div class="form-group">
+                <label for="username">사용자 이름</label>
+                <input
+                    type="text"
+                    id="username"
+                    name="username"
+                    placeholder="사용자 이름을 입력하세요"
+                    required
+                    autocomplete="username"
+                    autofocus
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="password">비밀번호</label>
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    placeholder="비밀번호를 입력하세요"
+                    required
+                    autocomplete="current-password"
+                >
+            </div>
+
+            <button type="submit">로그인</button>
+        </form>
+
+        <p class="info-text">
+            간편하게 로그인하고 스트리밍을 시작하세요
+        </p>
+
+        <div class="features">
+            <h3>서비스 특징</h3>
+            <div class="feature-list">
+                <div class="feature-item">HD 스트리밍</div>
+                <div class="feature-item">다중 접속</div>
+                <div class="feature-item">빠른 로딩</div>
+                <div class="feature-item">안정적 재생</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simple client-side validation
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+
+            if (username.length === 0) {
+                e.preventDefault();
+                alert('사용자 이름을 입력해주세요');
+                return false;
+            }
+
+            if (username.length < 2) {
+                e.preventDefault();
+                alert('사용자 이름은 최소 2글자 이상이어야 합니다');
+                return false;
+            }
+
+            if (password.length === 0) {
+                e.preventDefault();
+                alert('비밀번호를 입력해주세요');
+                return false;
+            }
+
+            if (password.length < 6) {
+                e.preventDefault();
+                alert('비밀번호는 최소 6글자 이상이어야 합니다');
+                return false;
+            }
+
+            // Form will submit normally
+            console.log('Logging in as:', username);
+        });
+
+        // Auto-focus on input field
+        window.addEventListener('load', function() {
+            document.getElementById('username').focus();
+        });
+    </script>
+</body>
+</html>

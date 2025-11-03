@@ -1,0 +1,94 @@
+dclab419@DESKTOP-24DGHVQ:/mnt/c/Users/dclab/Desktop/2025_2학기/네트워크프로그래밍/기말프로젝트/server$ make
+Compiling src/main.c...
+gcc -Wall -Wextra -g -Iinclude -c src/main.c -o src/main.o
+src/main.c: In function ‘main’:
+src/main.c:224:59: warning: ‘%s’ directive output may be truncated writing up to 511 bytes into a region of size 503 [-Wformat-truncation=]
+  224 |                 snprintf(client_path, MAX_PATH, "../client%s", req.path);
+      |                                                           ^~   ~~~~~~~~
+src/main.c:224:17: note: ‘snprintf’ output between 10 and 521 bytes into a destination of size 512
+  224 |                 snprintf(client_path, MAX_PATH, "../client%s", req.path);
+      |                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Compiling src/http.c...
+gcc -Wall -Wextra -g -Iinclude -c src/http.c -o src/http.o
+Compiling src/streaming.c...
+gcc -Wall -Wextra -g -Iinclude -c src/streaming.c -o src/streaming.o
+Compiling src/session.c...
+gcc -Wall -Wextra -g -Iinclude -c src/session.c -o src/session.o
+src/session.c: In function ‘validate_session’:
+src/session.c:214:56: warning: format ‘%s’ expects argument of type ‘char *’, but argument 3 has type ‘int’ [-Wformat=]
+  214 |                 printf("⏰ Session expired: %s (user: %s)\n",
+      |                                                       ~^
+      |                                                        |
+      |                                                        char *
+      |                                                       %d
+  215 |                        session_id, session_store->sessions[i].user_id);
+      |                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                                                              |
+      |                                                              int
+src/session.c: In function ‘destroy_session’:
+src/session.c:267:54: warning: format ‘%s’ expects argument of type ‘char *’, but argument 3 has type ‘int’ [-Wformat=]
+  267 |             printf("🚪 Session destroyed: %s (user: %s)\n",
+      |                                                     ~^
+      |                                                      |
+      |                                                      char *
+      |                                                     %d
+  268 |                    session_id, session_store->sessions[i].user_id);
+      |                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                                                          |
+      |                                                          int
+src/session.c: In function ‘cleanup_expired_sessions’:
+src/session.c:293:65: warning: format ‘%s’ expects argument of type ‘char *’, but argument 3 has type ‘int’ [-Wformat=]
+  293 |                 printf("🧹 Cleaning expired session: %s (user: %s)\n",
+      |                                                                ~^
+      |                                                                 |
+      |                                                                 char *
+      |                                                                %d
+  294 |                        session_store->sessions[i].session_id,
+  295 |                        session_store->sessions[i].user_id);
+      |                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                                                  |
+      |                                                  int
+src/session.c: In function ‘handle_login’:
+src/session.c:503:34: warning: format ‘%s’ expects argument of type ‘char *’, but argument 2 has type ‘int’ [-Wformat=]
+  503 |     printf("✓ Login successful: %s → session %s\n", user_id, session_id);
+      |                                 ~^                  ~~~~~~~
+      |                                  |                  |
+      |                                  char *             int
+      |                                 %d
+src/session.c:493:14: warning: ‘%s’ directive output may be truncated writing up to 65535 bytes into a region of size 65503 [-Wformat-truncation=]
+  493 |              "%s"
+      |              ^~~~
+......
+  499 |              set_cookie);
+      |              ~~~~~~~~~~
+src/session.c:495:15: note: format string is defined here
+  495 |              "%s"
+      |               ^~
+src/session.c:492:5: note: ‘snprintf’ output between 55 and 65590 bytes into a destination of size 65536
+  492 |     snprintf(response, sizeof(response),
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  493 |              "%s"
+      |              ~~~~
+  494 |              "Location: /\r\n"
+      |              ~~~~~~~~~~~~~~~~~
+  495 |              "%s"
+      |              ~~~~
+  496 |              "Content-Length: 0\r\n"
+      |              ~~~~~~~~~~~~~~~~~~~~~~~
+  497 |              "\r\n",
+      |              ~~~~~~~
+  498 |              HTTP_302_FOUND,
+      |              ~~~~~~~~~~~~~~~
+  499 |              set_cookie);
+      |              ~~~~~~~~~~~
+Compiling src/database.c...
+gcc -Wall -Wextra -g -Iinclude -c src/database.c -o src/database.o
+In file included from src/database.c:8:
+src/../include/database.h:38:40: error: unknown type name ‘size_t’
+   38 | int get_videos_json(char* json_output, size_t max_len);
+      |                                        ^~~~~~
+src/../include/database.h:5:1: note: ‘size_t’ is defined in header ‘<stddef.h>’; did you forget to ‘#include <stddef.h>’?
+    4 | #include <sqlite3.h>
+  +++ |+#include <stddef.h>
+    5 |
+make: *** [Makefile:33: src/database.o] Error 1

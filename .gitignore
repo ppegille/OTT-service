@@ -1,0 +1,50 @@
+# Compiled Object files
+*.o
+*.obj
+*.exe
+*.out
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Video files (too large for git)
+videos/*.mp4
+videos/*.avi
+videos/*.mov
+
+# Thumbnails (can be regenerated)
+thumbnails/*.jpg
+thumbnails/*.png
+thumbnails/*.jpeg
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Build directories
+build/
+bin/
+obj/
+
+# Log files
+*.log
+
+# Temporary files
+*.tmp
+temp/
+
+# Windows specific
+*.pdb
+*.ilk
+*.suo
+*.user

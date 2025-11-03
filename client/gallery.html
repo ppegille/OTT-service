@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Gallery - OTT Streaming</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 2em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            color: #333;
+        }
+
+        .user-info .username {
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .logout-btn {
+            padding: 10px 20px;
+            background: #764ba2;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        .logout-btn:hover {
+            background: #667eea;
+        }
+
+        .video-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+            padding: 20px;
+        }
+
+        .video-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+        }
+
+        .video-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .video-thumbnail {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .video-thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .video-thumbnail .placeholder {
+            font-size: 4em;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .video-thumbnail .play-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 70px;
+            height: 70px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .video-card:hover .play-overlay {
+            opacity: 1;
+        }
+
+        .play-overlay::after {
+            content: '';
+            width: 0;
+            height: 0;
+            border-left: 20px solid #667eea;
+            border-top: 12px solid transparent;
+            border-bottom: 12px solid transparent;
+            margin-left: 5px;
+        }
+
+        .video-info {
+            padding: 20px;
+        }
+
+        .video-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .video-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .video-duration {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .watched-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background: #4CAF50;
+            color: white;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: #e0e0e0;
+            margin-top: 10px;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: #667eea;
+            transition: width 0.3s;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: white;
+            font-size: 1.5em;
+        }
+
+        .error {
+            background: rgba(244, 67, 54, 0.95);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px;
+            text-align: center;
+        }
+
+        .no-videos {
+            background: rgba(255, 255, 255, 0.95);
+            color: #666;
+            padding: 50px;
+            border-radius: 15px;
+            text-align: center;
+            font-size: 1.2em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>
+                <span>🎬</span>
+                Video Gallery
+            </h1>
+            <div class="user-info">
+                <span>사용자:</span>
+                <span class="username" id="username">Loading...</span>
+                <button class="logout-btn" onclick="logout()">로그아웃</button>
+            </div>
+        </div>
+
+        <div class="video-gallery" id="videoGallery">
+            <div class="loading">비디오 목록을 불러오는 중...</div>
+        </div>
+    </div>
+
+    <script>
+        // Format duration from seconds to MM:SS
+        function formatDuration(seconds) {
+            if (!seconds || seconds === 0) return '00:00';
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+
+        // Format file size to human readable
+        function formatFileSize(bytes) {
+            if (!bytes || bytes === 0) return 'Unknown';
+            const kb = bytes / 1024;
+            const mb = kb / 1024;
+            if (mb >= 1) {
+                return `${mb.toFixed(1)} MB`;
+            } else {
+                return `${kb.toFixed(1)} KB`;
+            }
+        }
+
+        // Create video card HTML
+        function createVideoCard(video) {
+            const watchedPercent = video.duration > 0
+                ? (video.last_position / video.duration * 100).toFixed(1)
+                : 0;
+
+            return `
+                <div class="video-card" onclick="playVideo(${video.video_id}, '${video.filename}')">
+                    <div class="video-thumbnail">
+                        ${video.thumbnail && video.thumbnail !== ''
+                            ? `<img src="${video.thumbnail}" alt="${video.title}">`
+                            : `<div class="placeholder">🎬</div>`
+                        }
+                        <div class="play-overlay"></div>
+                    </div>
+                    <div class="video-info">
+                        <div class="video-title" title="${video.title}">${video.title}</div>
+                        <div class="video-meta">
+                            <div class="video-duration">
+                                <span>⏱️</span>
+                                <span>${formatDuration(video.duration)}</span>
+                            </div>
+                            ${video.watched
+                                ? `<div class="watched-badge">시청 중 ${watchedPercent}%</div>`
+                                : ''
+                            }
+                        </div>
+                        ${video.watched && video.duration > 0
+                            ? `<div class="progress-bar">
+                                   <div class="progress-bar-fill" style="width: ${watchedPercent}%"></div>
+                               </div>`
+                            : ''
+                        }
+                    </div>
+                </div>
+            `;
+        }
+
+        // Load videos from API
+        async function loadVideos() {
+            try {
+                const response = await fetch('/api/videos');
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                const gallery = document.getElementById('videoGallery');
+
+                if (!data.videos || data.videos.length === 0) {
+                    gallery.innerHTML = '<div class="no-videos">비디오가 없습니다.</div>';
+                    return;
+                }
+
+                // Render video cards
+                gallery.innerHTML = data.videos.map(video => createVideoCard(video)).join('');
+
+                console.log(`Loaded ${data.videos.length} videos`);
+            } catch (error) {
+                console.error('Failed to load videos:', error);
+                document.getElementById('videoGallery').innerHTML = `
+                    <div class="error">
+                        <h2>오류</h2>
+                        <p>비디오 목록을 불러오는데 실패했습니다.</p>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Play video (navigate to player page)
+        function playVideo(videoId, filename) {
+            window.location.href = `/player.html?video_id=${videoId}&filename=${filename}`;
+        }
+
+        // Logout
+        function logout() {
+            // TODO: Implement logout API endpoint
+            alert('로그아웃 기능은 다음 단계에서 구현됩니다.');
+        }
+
+        // Load videos when page loads
+        window.addEventListener('DOMContentLoaded', () => {
+            loadVideos();
+        });
+    </script>
+</body>
+</html>

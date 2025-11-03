@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Player - OTT Streaming</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 900px;
+            width: 100%;
+            padding: 30px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .back-btn {
+            display: inline-block;
+            margin-bottom: 20px;
+            padding: 8px 16px;
+            background: #f0f0f0;
+            color: #333;
+            text-decoration: none;
+            border-radius: 6px;
+            transition: background 0.3s;
+        }
+
+        .back-btn:hover {
+            background: #e0e0e0;
+        }
+
+        .video-container {
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        video {
+            width: 100%;
+            display: block;
+        }
+
+        /* Resume Dialog */
+        .dialog-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .dialog-overlay.show {
+            display: flex;
+        }
+
+        .dialog {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .dialog h2 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .dialog p {
+            color: #666;
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
+
+        .dialog-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .dialog-buttons button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .status {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            font-size: 14px;
+        }
+
+        .status-label {
+            color: #666;
+            font-weight: 500;
+        }
+
+        .status-value {
+            color: #333;
+            font-family: 'Courier New', monospace;
+        }
+
+        .saved-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #4CAF50;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 999;
+        }
+
+        .saved-indicator.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="saved-indicator" id="savedIndicator">
+        ✓ 시청 위치 저장됨
+    </div>
+
+    <!-- Resume Dialog -->
+    <div class="dialog-overlay" id="resumeDialog">
+        <div class="dialog">
+            <h2>🎬 비디오 재생</h2>
+            <p>
+                이전에 시청한 기록이 있습니다.<br>
+                마지막 시청 위치: <strong id="resumePosition">0:00</strong>
+            </p>
+            <div class="dialog-buttons">
+                <button class="btn-secondary" onclick="startFromBeginning()">처음부터</button>
+                <button class="btn-primary" onclick="resumePlayback()">이어보기</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <a href="/" class="back-btn">← 비디오 목록으로</a>
+
+        <h1 id="videoTitle">비디오 플레이어</h1>
+
+        <div class="video-container">
+            <video id="player" controls>
+                브라우저가 HTML5 비디오를 지원하지 않습니다.
+            </video>
+        </div>
+
+        <div class="status">
+            <h3 style="margin-bottom: 10px; color: #333;">📊 재생 상태</h3>
+            <div class="status-item">
+                <span class="status-label">현재 시간:</span>
+                <span class="status-value" id="currentTime">0:00</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">전체 시간:</span>
+                <span class="status-value" id="duration">0:00</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">시청 진행률:</span>
+                <span class="status-value" id="progress">0%</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">마지막 저장:</span>
+                <span class="status-value" id="lastSaved">-</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const player = document.getElementById('player');
+        const urlParams = new URLSearchParams(window.location.search);
+        const videoId = parseInt(urlParams.get('video_id'));
+        const filename = urlParams.get('filename');
+
+        let lastPosition = 0;
+        let saveInterval = null;
+
+        // Format time (seconds → MM:SS)
+        function formatTime(seconds) {
+            if (isNaN(seconds) || seconds === 0) return '0:00';
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${String(secs).padStart(2, '0')}`;
+        }
+
+        // Show saved indicator
+        function showSavedIndicator() {
+            const indicator = document.getElementById('savedIndicator');
+            indicator.classList.add('show');
+            setTimeout(() => {
+                indicator.classList.remove('show');
+            }, 2000);
+        }
+
+        // Save watch progress
+        async function saveWatchProgress(position) {
+            if (!videoId || position < 0) return;
+
+            try {
+                const response = await fetch('/api/watch-progress', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        video_id: videoId,
+                        position: Math.floor(position)
+                    })
+                });
+
+                if (response.ok) {
+                    document.getElementById('lastSaved').textContent = formatTime(position);
+                    showSavedIndicator();
+                    console.log(`Saved position: ${Math.floor(position)}s`);
+                }
+            } catch (error) {
+                console.error('Failed to save watch progress:', error);
+            }
+        }
+
+        // Check watch history and show resume dialog
+        async function checkWatchHistory() {
+            if (!videoId) return;
+
+            try {
+                const response = await fetch(`/api/watch-history/${videoId}`);
+                const data = await response.json();
+
+                if (data.watched && data.last_position > 5) {
+                    lastPosition = data.last_position;
+                    document.getElementById('resumePosition').textContent = formatTime(lastPosition);
+                    document.getElementById('resumeDialog').classList.add('show');
+                } else {
+                    startFromBeginning();
+                }
+            } catch (error) {
+                console.error('Failed to check watch history:', error);
+                startFromBeginning();
+            }
+        }
+
+        // Start from beginning
+        function startFromBeginning() {
+            document.getElementById('resumeDialog').classList.remove('show');
+            player.currentTime = 0;
+            player.play().catch(e => console.log('Auto-play blocked'));
+        }
+
+        // Resume playback
+        function resumePlayback() {
+            document.getElementById('resumeDialog').classList.remove('show');
+            player.currentTime = lastPosition;
+            player.play().catch(e => console.log('Auto-play blocked'));
+        }
+
+        // Initialize video player
+        function initializePlayer() {
+            if (!filename) {
+                alert('비디오 파일이 지정되지 않았습니다.');
+                window.location.href = '/';
+                return;
+            }
+
+            // Set video source
+            const source = document.createElement('source');
+            source.src = `/videos/${filename}`;
+            source.type = 'video/mp4';
+            player.appendChild(source);
+
+            // Set title (remove extension)
+            const title = filename.replace(/\.[^/.]+$/, '');
+            document.getElementById('videoTitle').textContent = title;
+
+            // Check watch history after video metadata loaded
+            player.addEventListener('loadedmetadata', () => {
+                document.getElementById('duration').textContent = formatTime(player.duration);
+                checkWatchHistory();
+            });
+
+            // Update UI during playback
+            player.addEventListener('timeupdate', () => {
+                const current = player.currentTime;
+                const total = player.duration;
+
+                document.getElementById('currentTime').textContent = formatTime(current);
+                document.getElementById('progress').textContent =
+                    total > 0 ? `${(current / total * 100).toFixed(1)}%` : '0%';
+            });
+
+            // Auto-save watch progress every 10 seconds
+            saveInterval = setInterval(() => {
+                if (!player.paused && !player.ended) {
+                    saveWatchProgress(player.currentTime);
+                }
+            }, 10000);
+
+            // Save on pause
+            player.addEventListener('pause', () => {
+                saveWatchProgress(player.currentTime);
+            });
+
+            // Save before leaving page
+            window.addEventListener('beforeunload', () => {
+                if (player.currentTime > 0 && !player.ended) {
+                    // Use synchronous request for beforeunload
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('POST', '/api/watch-progress', false);
+                    xhr.setRequestHeader('Content-Type', 'application/json');
+                    xhr.send(JSON.stringify({
+                        video_id: videoId,
+                        position: Math.floor(player.currentTime)
+                    }));
+                }
+            });
+        }
+
+        // Start player when page loads
+        window.addEventListener('DOMContentLoaded', initializePlayer);
+
+        // Cleanup interval on page unload
+        window.addEventListener('unload', () => {
+            if (saveInterval) {
+                clearInterval(saveInterval);
+            }
+        });
+    </script>
+</body>
+</html>
