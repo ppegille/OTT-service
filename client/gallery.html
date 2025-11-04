@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Video Gallery - OTT Streaming</title>
+    <title>Hoflix - Browse</title>
     <style>
         * {
             margin: 0;
@@ -12,115 +12,138 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background: #141414;
+            color: #fff;
             min-height: 100vh;
-            padding: 20px;
         }
 
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        .header {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 20px 30px;
-            border-radius: 15px;
-            margin-bottom: 30px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        /* Header / Navbar */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 70px;
+            background: linear-gradient(180deg, rgba(0, 0, 0, 0.7) 10%, transparent);
             display: flex;
+            align-items: center;
             justify-content: space-between;
-            align-items: center;
-        }
-
-        .header h1 {
-            color: #667eea;
-            font-size: 2em;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            color: #333;
-        }
-
-        .user-info .username {
-            font-weight: 600;
-            color: #667eea;
-        }
-
-        .logout-btn {
-            padding: 10px 20px;
-            background: #764ba2;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
+            padding: 0 60px;
+            z-index: 100;
             transition: background 0.3s;
         }
 
-        .logout-btn:hover {
-            background: #667eea;
+        .navbar.scrolled {
+            background: #141414;
         }
 
-        .video-gallery {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 25px;
-            padding: 20px;
-        }
-
-        .video-card {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 15px;
-            overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            transition: transform 0.3s, box-shadow 0.3s;
+        .navbar .logo {
+            font-size: 32px;
+            font-weight: 700;
+            color: #E50914;
+            letter-spacing: -1px;
             cursor: pointer;
         }
 
+        .navbar .user-section {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .navbar .username {
+            color: #e5e5e5;
+            font-size: 14px;
+        }
+
+        .navbar .logout-btn {
+            padding: 8px 16px;
+            background: transparent;
+            color: #fff;
+            border: 1px solid #fff;
+            border-radius: 2px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .navbar .logout-btn:hover {
+            background: #fff;
+            color: #000;
+        }
+
+        /* Main Content */
+        .container {
+            padding: 100px 60px 60px;
+            max-width: 1920px;
+            margin: 0 auto;
+        }
+
+        .section-title {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #e5e5e5;
+        }
+
+        /* Video Gallery Grid */
+        .video-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .video-card {
+            position: relative;
+            border-radius: 4px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            background: #2f2f2f;
+        }
+
         .video-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+            transform: scale(1.05);
+            z-index: 10;
         }
 
         .video-thumbnail {
             width: 100%;
-            height: 200px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            padding-top: 56.25%; /* 16:9 aspect ratio */
             position: relative;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2f2f2f 100%);
             overflow: hidden;
         }
 
         .video-thumbnail img {
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
             object-fit: cover;
         }
 
         .video-thumbnail .placeholder {
-            font-size: 4em;
-            color: rgba(255, 255, 255, 0.7);
-        }
-
-        .video-thumbnail .play-overlay {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 70px;
-            height: 70px;
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: 50%;
+            font-size: 60px;
+            opacity: 0.3;
+        }
+
+        /* Play overlay */
+        .play-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -132,25 +155,44 @@
             opacity: 1;
         }
 
-        .play-overlay::after {
+        .play-button {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.9);
+            border: 2px solid #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .play-button::after {
             content: '';
             width: 0;
             height: 0;
-            border-left: 20px solid #667eea;
-            border-top: 12px solid transparent;
-            border-bottom: 12px solid transparent;
-            margin-left: 5px;
+            border-left: 18px solid #000;
+            border-top: 11px solid transparent;
+            border-bottom: 11px solid transparent;
+            margin-left: 4px;
         }
 
+        .video-card:hover .play-button {
+            transform: scale(1.1);
+            background: #fff;
+        }
+
+        /* Video Info */
         .video-info {
-            padding: 20px;
+            padding: 12px;
+            background: #2f2f2f;
         }
 
         .video-title {
-            font-size: 1.2em;
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 10px;
+            font-size: 16px;
+            font-weight: 500;
+            color: #e5e5e5;
+            margin-bottom: 8px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -160,8 +202,9 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            color: #666;
-            font-size: 0.9em;
+            font-size: 13px;
+            color: #d2d2d2;
+            margin-bottom: 8px;
         }
 
         .video-duration {
@@ -170,101 +213,162 @@
             gap: 5px;
         }
 
-        .watched-badge {
-            display: inline-block;
-            padding: 4px 12px;
-            background: #4CAF50;
-            color: white;
-            border-radius: 12px;
-            font-size: 0.8em;
-            font-weight: 600;
+        .video-stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: #8c8c8c;
         }
 
+        /* Watch progress badge */
+        .watched-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 8px;
+            background: #E50914;
+            color: #fff;
+            border-radius: 2px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        /* Progress bar */
         .progress-bar {
             width: 100%;
-            height: 4px;
-            background: #e0e0e0;
-            margin-top: 10px;
+            height: 3px;
+            background: #4a4a4a;
+            margin-top: 8px;
             border-radius: 2px;
             overflow: hidden;
         }
 
         .progress-bar-fill {
             height: 100%;
-            background: #667eea;
+            background: #E50914;
             transition: width 0.3s;
         }
 
+        /* Loading & Error states */
         .loading {
             text-align: center;
-            padding: 50px;
-            color: white;
-            font-size: 1.5em;
+            padding: 100px 20px;
+            color: #e5e5e5;
+            font-size: 18px;
+        }
+
+        .loading::after {
+            content: '...';
+            animation: dots 1.5s infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
         }
 
         .error {
-            background: rgba(244, 67, 54, 0.95);
-            color: white;
-            padding: 20px;
-            border-radius: 15px;
-            margin: 20px;
-            text-align: center;
+            background: rgba(229, 9, 20, 0.1);
+            border-left: 4px solid #E50914;
+            color: #e5e5e5;
+            padding: 40px;
+            border-radius: 4px;
+            margin: 40px 0;
+        }
+
+        .error h2 {
+            color: #E50914;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+
+        .error p {
+            margin: 8px 0;
+            font-size: 14px;
+            line-height: 1.6;
         }
 
         .no-videos {
-            background: rgba(255, 255, 255, 0.95);
-            color: #666;
-            padding: 50px;
-            border-radius: 15px;
             text-align: center;
-            font-size: 1.2em;
+            padding: 100px 20px;
+            color: #e5e5e5;
+            font-size: 18px;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .video-gallery {
+                grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            }
+        }
+
+        @media (max-width: 768px) {
+            .navbar {
+                padding: 0 30px;
+            }
+
+            .container {
+                padding: 90px 30px 40px;
+            }
+
+            .navbar .logo {
+                font-size: 24px;
+            }
+
+            .section-title {
+                font-size: 20px;
+            }
+
+            .video-gallery {
+                grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+                gap: 10px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>
-                <span>🎬</span>
-                Video Gallery
-            </h1>
-            <div class="user-info">
-                <span>사용자:</span>
-                <span class="username" id="username">Loading...</span>
-                <button class="logout-btn" onclick="logout()">로그아웃</button>
-            </div>
+    <!-- Navigation Bar -->
+    <nav class="navbar" id="navbar">
+        <div class="logo">HOFLIX</div>
+        <div class="user-section">
+            <span class="username" id="username">Loading...</span>
+            <button class="logout-btn" onclick="logout()">로그아웃</button>
         </div>
+    </nav>
 
+    <!-- Main Content -->
+    <div class="container">
+        <h2 class="section-title">인기 콘텐츠</h2>
         <div class="video-gallery" id="videoGallery">
-            <div class="loading">비디오 목록을 불러오는 중...</div>
+            <div class="loading">비디오 목록을 불러오는 중</div>
         </div>
     </div>
 
     <script>
+        // Navbar scroll effect
+        window.addEventListener('scroll', () => {
+            const navbar = document.getElementById('navbar');
+            if (window.scrollY > 50) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+        });
+
         // Format duration from seconds to MM:SS
         function formatDuration(seconds) {
-            if (!seconds || seconds === 0) return '00:00';
+            if (!seconds || seconds === 0) return '0:00';
             const mins = Math.floor(seconds / 60);
             const secs = seconds % 60;
-            return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-        }
-
-        // Format file size to human readable
-        function formatFileSize(bytes) {
-            if (!bytes || bytes === 0) return 'Unknown';
-            const kb = bytes / 1024;
-            const mb = kb / 1024;
-            if (mb >= 1) {
-                return `${mb.toFixed(1)} MB`;
-            } else {
-                return `${kb.toFixed(1)} KB`;
-            }
+            return `${mins}:${String(secs).padStart(2, '0')}`;
         }
 
         // Create video card HTML
         function createVideoCard(video) {
             const watchedPercent = video.duration > 0
-                ? (video.last_position / video.duration * 100).toFixed(1)
+                ? Math.round(video.last_position / video.duration * 100)
                 : 0;
 
             return `
@@ -274,25 +378,32 @@
                             ? `<img src="${video.thumbnail}" alt="${video.title}">`
                             : `<div class="placeholder">🎬</div>`
                         }
-                        <div class="play-overlay"></div>
+                        <div class="play-overlay">
+                            <div class="play-button"></div>
+                        </div>
                     </div>
                     <div class="video-info">
                         <div class="video-title" title="${video.title}">${video.title}</div>
                         <div class="video-meta">
                             <div class="video-duration">
-                                <span>⏱️</span>
+                                <span>⏱</span>
                                 <span>${formatDuration(video.duration)}</span>
                             </div>
                             ${video.watched
-                                ? `<div class="watched-badge">시청 중 ${watchedPercent}%</div>`
-                                : ''
+                                ? `<div class="watched-badge">${watchedPercent}% 시청</div>`
+                                : `<div class="watched-badge" style="background: #404040; color: #b3b3b3;">미시청</div>`
                             }
                         </div>
                         ${video.watched && video.duration > 0
-                            ? `<div class="progress-bar">
+                            ? `<div class="video-stats">
+                                   <span>시청: ${formatDuration(video.last_position)} / ${formatDuration(video.duration)}</span>
+                               </div>
+                               <div class="progress-bar">
                                    <div class="progress-bar-fill" style="width: ${watchedPercent}%"></div>
                                </div>`
-                            : ''
+                            : `<div class="video-stats">
+                                   <span>전체 시간: ${formatDuration(video.duration)}</span>
+                               </div>`
                         }
                     </div>
                 </div>
@@ -312,7 +423,7 @@
                 const gallery = document.getElementById('videoGallery');
 
                 if (!data.videos || data.videos.length === 0) {
-                    gallery.innerHTML = '<div class="no-videos">비디오가 없습니다.</div>';
+                    gallery.innerHTML = '<div class="no-videos">등록된 비디오가 없습니다.</div>';
                     return;
                 }
 
@@ -324,23 +435,25 @@
                 console.error('Failed to load videos:', error);
                 document.getElementById('videoGallery').innerHTML = `
                     <div class="error">
-                        <h2>오류</h2>
-                        <p>비디오 목록을 불러오는데 실패했습니다.</p>
-                        <p>${error.message}</p>
+                        <h2>오류가 발생했습니다</h2>
+                        <p>비디오 목록을 불러올 수 없습니다.</p>
+                        <p>오류 메시지: ${error.message}</p>
                     </div>
                 `;
             }
         }
 
-        // Play video (navigate to player page)
+        // Navigate to video player
         function playVideo(videoId, filename) {
-            window.location.href = `/player.html?video_id=${videoId}&filename=${filename}`;
+            window.location.href = `/player.html?video_id=${videoId}&filename=${encodeURIComponent(filename)}`;
         }
 
-        // Logout
+        // Logout function
         function logout() {
-            // TODO: Implement logout API endpoint
-            alert('로그아웃 기능은 다음 단계에서 구현됩니다.');
+            if (confirm('로그아웃 하시겠습니까?')) {
+                // TODO: Implement proper logout API endpoint
+                window.location.href = '/';
+            }
         }
 
         // Load videos when page loads

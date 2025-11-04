@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OTT Login</title>
+    <title>Hoflix - Login</title>
     <style>
         * {
             margin: 0;
@@ -12,166 +12,202 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background: #141414;
             min-height: 100vh;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
         }
 
-        .login-container {
-            background: white;
-            padding: 50px;
-            border-radius: 15px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-            width: 100%;
-            max-width: 400px;
-            animation: fadeIn 0.5s ease-in-out;
+        /* Background gradient overlay */
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(to bottom,
+                rgba(0, 0, 0, 0.7) 0%,
+                rgba(0, 0, 0, 0.5) 50%,
+                rgba(0, 0, 0, 0.7) 100%);
+            z-index: 0;
         }
 
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        .header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 20px 50px;
+            z-index: 10;
         }
 
         .logo {
-            text-align: center;
-            margin-bottom: 30px;
+            font-size: 42px;
+            font-weight: 700;
+            color: #E50914;
+            letter-spacing: -2px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
         }
 
-        .logo h1 {
-            color: #667eea;
-            font-size: 36px;
-            font-weight: bold;
-            margin-bottom: 5px;
+        .login-container {
+            background: rgba(0, 0, 0, 0.75);
+            padding: 60px 68px 40px;
+            border-radius: 4px;
+            width: 100%;
+            max-width: 450px;
+            z-index: 1;
+            box-shadow: 0 10px 50px rgba(0, 0, 0, 0.5);
         }
 
-        .logo p {
-            color: #666;
-            font-size: 14px;
+        .login-container h1 {
+            color: #fff;
+            font-size: 32px;
+            font-weight: 500;
+            margin-bottom: 28px;
         }
 
         .form-group {
-            margin-bottom: 25px;
+            margin-bottom: 16px;
         }
 
         label {
-            display: block;
-            margin-bottom: 8px;
-            color: #333;
-            font-weight: 500;
-            font-size: 14px;
+            display: none;
         }
 
         input[type="text"],
         input[type="password"] {
             width: 100%;
-            padding: 14px 16px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
+            padding: 16px 20px;
+            background: #333;
+            border: none;
+            border-radius: 4px;
+            color: #fff;
             font-size: 16px;
-            transition: all 0.3s ease;
             outline: none;
+            transition: all 0.2s;
         }
 
         input[type="text"]:focus,
         input[type="password"]:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            background: #454545;
         }
 
         input[type="text"]::placeholder,
         input[type="password"]::placeholder {
-            color: #999;
+            color: #8c8c8c;
         }
 
-        button {
+        .login-btn {
             width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 16px;
+            background: #E50914;
             color: white;
             border: none;
-            border-radius: 8px;
+            border-radius: 4px;
             cursor: pointer;
             font-size: 16px;
             font-weight: 600;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            margin-top: 24px;
+            transition: background 0.2s;
         }
 
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        .login-btn:hover {
+            background: #f40612;
         }
 
-        button:active {
-            transform: translateY(0);
+        .login-btn:active {
+            background: #b20710;
         }
 
         .info-text {
-            text-align: center;
-            margin-top: 20px;
-            color: #666;
+            color: #737373;
             font-size: 13px;
+            margin-top: 16px;
+            line-height: 1.5;
         }
 
-        .features {
-            margin-top: 30px;
+        .info-text a {
+            color: #fff;
+            text-decoration: none;
+        }
+
+        .info-text a:hover {
+            text-decoration: underline;
+        }
+
+        .help-text {
+            margin-top: 40px;
             padding-top: 30px;
-            border-top: 1px solid #e0e0e0;
+            border-top: 1px solid #333;
         }
 
-        .features h3 {
-            color: #333;
-            font-size: 14px;
+        .help-text h3 {
+            color: #8c8c8c;
+            font-size: 16px;
+            font-weight: 400;
             margin-bottom: 15px;
-            text-align: center;
         }
 
         .feature-list {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
+            list-style: none;
+            padding: 0;
         }
 
         .feature-item {
-            display: flex;
-            align-items: center;
+            color: #8c8c8c;
             font-size: 13px;
-            color: #666;
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
         }
 
         .feature-item::before {
             content: "✓";
-            color: #667eea;
+            color: #E50914;
+            position: absolute;
+            left: 0;
             font-weight: bold;
-            margin-right: 8px;
-            font-size: 16px;
+        }
+
+        .demo-info {
+            background: rgba(229, 9, 20, 0.1);
+            border-left: 3px solid #E50914;
+            padding: 12px 16px;
+            margin-top: 20px;
+            border-radius: 4px;
+        }
+
+        .demo-info p {
+            color: #E50914;
+            font-size: 13px;
+            margin: 4px 0;
+        }
+
+        .demo-info strong {
+            color: #fff;
         }
     </style>
 </head>
 <body>
+    <div class="header">
+        <div class="logo">HOFLIX</div>
+    </div>
+
     <div class="login-container">
-        <div class="logo">
-            <h1>🎬 OTT</h1>
-            <p>Video Streaming Platform</p>
-        </div>
+        <h1>로그인</h1>
 
         <form method="POST" action="/login" id="loginForm">
             <div class="form-group">
-                <label for="username">사용자 이름</label>
                 <input
                     type="text"
                     id="username"
                     name="username"
-                    placeholder="사용자 이름을 입력하세요"
+                    placeholder="사용자 이름"
                     required
                     autocomplete="username"
                     autofocus
@@ -179,37 +215,42 @@
             </div>
 
             <div class="form-group">
-                <label for="password">비밀번호</label>
                 <input
                     type="password"
                     id="password"
                     name="password"
-                    placeholder="비밀번호를 입력하세요"
+                    placeholder="비밀번호"
                     required
                     autocomplete="current-password"
                 >
             </div>
 
-            <button type="submit">로그인</button>
-        </form>
+            <button type="submit" class="login-btn">로그인</button>
 
-        <p class="info-text">
-            간편하게 로그인하고 스트리밍을 시작하세요
-        </p>
-
-        <div class="features">
-            <h3>서비스 특징</h3>
-            <div class="feature-list">
-                <div class="feature-item">HD 스트리밍</div>
-                <div class="feature-item">다중 접속</div>
-                <div class="feature-item">빠른 로딩</div>
-                <div class="feature-item">안정적 재생</div>
+            <div class="demo-info">
+                <p><strong>데모 계정:</strong></p>
+                <p>사용자명: <strong>alice</strong> / 비밀번호: <strong>password123</strong></p>
+                <p>사용자명: <strong>bob</strong> / 비밀번호: <strong>password123</strong></p>
             </div>
-        </div>
+
+            <p class="info-text">
+                Hoflix에서 다양한 비디오를 스트리밍하세요.
+            </p>
+
+            <div class="help-text">
+                <h3>서비스 특징</h3>
+                <ul class="feature-list">
+                    <li class="feature-item">HD 화질 스트리밍</li>
+                    <li class="feature-item">이어보기 기능</li>
+                    <li class="feature-item">다중 사용자 지원</li>
+                    <li class="feature-item">빠른 로딩 속도</li>
+                </ul>
+            </div>
+        </form>
     </div>
 
     <script>
-        // Simple client-side validation
+        // Client-side validation
         document.getElementById('loginForm').addEventListener('submit', function(e) {
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
@@ -238,11 +279,10 @@
                 return false;
             }
 
-            // Form will submit normally
             console.log('Logging in as:', username);
         });
 
-        // Auto-focus on input field
+        // Auto-focus on username field
         window.addEventListener('load', function() {
             document.getElementById('username').focus();
         });

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Video Player - OTT Streaming</title>
+    <title>Hoflix - Watch</title>
     <style>
         * {
             margin: 0;
@@ -12,56 +12,130 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background: #141414;
+            color: #fff;
             min-height: 100vh;
+        }
+
+        /* Navigation Bar */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 70px;
+            background: linear-gradient(180deg, rgba(0, 0, 0, 0.7) 10%, transparent);
             display: flex;
             align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .container {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            max-width: 900px;
-            width: 100%;
-            padding: 30px;
-        }
-
-        h1 {
-            color: #333;
-            margin-bottom: 10px;
-            font-size: 28px;
-        }
-
-        .back-btn {
-            display: inline-block;
-            margin-bottom: 20px;
-            padding: 8px 16px;
-            background: #f0f0f0;
-            color: #333;
-            text-decoration: none;
-            border-radius: 6px;
+            justify-content: space-between;
+            padding: 0 60px;
+            z-index: 100;
             transition: background 0.3s;
         }
 
-        .back-btn:hover {
-            background: #e0e0e0;
+        .navbar.scrolled {
+            background: #141414;
         }
 
+        .navbar .logo {
+            font-size: 28px;
+            font-weight: 700;
+            color: #E50914;
+            letter-spacing: -1px;
+            cursor: pointer;
+        }
+
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: transparent;
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 2px;
+            cursor: pointer;
+            font-size: 14px;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: #fff;
+        }
+
+        /* Main Container */
+        .container {
+            padding-top: 70px;
+            max-width: 1920px;
+            margin: 0 auto;
+        }
+
+        .video-title {
+            padding: 20px 60px;
+            font-size: 28px;
+            font-weight: 500;
+            color: #e5e5e5;
+        }
+
+        /* Video Player Container */
         .video-container {
-            background: #000;
-            border-radius: 8px;
-            overflow: hidden;
-            margin-bottom: 20px;
             position: relative;
+            background: #000;
+            width: 100%;
+            max-height: 80vh;
         }
 
         video {
             width: 100%;
+            height: auto;
             display: block;
+        }
+
+        /* Player Info Panel */
+        .player-info {
+            padding: 30px 60px;
+            background: #181818;
+        }
+
+        .info-section {
+            margin-bottom: 30px;
+        }
+
+        .info-section h3 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #e5e5e5;
+            margin-bottom: 15px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .stat-item {
+            background: #2f2f2f;
+            padding: 16px 20px;
+            border-radius: 4px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #8c8c8c;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            color: #e5e5e5;
+            font-weight: 500;
+            font-family: 'Courier New', monospace;
         }
 
         /* Resume Dialog */
@@ -71,7 +145,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.85);
             display: none;
             align-items: center;
             justify-content: center;
@@ -83,111 +157,137 @@
         }
 
         .dialog {
-            background: white;
-            border-radius: 12px;
-            padding: 30px;
-            max-width: 400px;
+            background: #181818;
+            border-radius: 6px;
+            padding: 40px;
+            max-width: 480px;
             width: 90%;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
         }
 
         .dialog h2 {
-            color: #333;
-            margin-bottom: 15px;
+            color: #e5e5e5;
+            font-size: 28px;
+            font-weight: 500;
+            margin-bottom: 20px;
         }
 
         .dialog p {
-            color: #666;
-            margin-bottom: 25px;
-            line-height: 1.5;
+            color: #b3b3b3;
+            font-size: 16px;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+
+        .dialog p strong {
+            color: #E50914;
+            font-weight: 600;
         }
 
         .dialog-buttons {
             display: flex;
-            gap: 10px;
+            gap: 12px;
         }
 
         .dialog-buttons button {
             flex: 1;
-            padding: 12px;
+            padding: 14px 24px;
             border: none;
-            border-radius: 6px;
+            border-radius: 4px;
             cursor: pointer;
             font-size: 16px;
             font-weight: 600;
-            transition: background 0.3s;
+            transition: all 0.2s;
         }
 
         .btn-primary {
-            background: #667eea;
+            background: #E50914;
             color: white;
         }
 
         .btn-primary:hover {
-            background: #5568d3;
+            background: #f40612;
         }
 
         .btn-secondary {
-            background: #f0f0f0;
-            color: #333;
+            background: rgba(109, 109, 110, 0.7);
+            color: white;
         }
 
         .btn-secondary:hover {
-            background: #e0e0e0;
+            background: rgba(109, 109, 110, 0.9);
         }
 
-        .status {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 6px;
-            margin-bottom: 20px;
-        }
-
-        .status-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 5px 0;
-            font-size: 14px;
-        }
-
-        .status-label {
-            color: #666;
-            font-weight: 500;
-        }
-
-        .status-value {
-            color: #333;
-            font-family: 'Courier New', monospace;
-        }
-
+        /* Saved Indicator */
         .saved-indicator {
             position: fixed;
-            top: 20px;
-            right: 20px;
-            background: #4CAF50;
-            color: white;
+            bottom: 30px;
+            right: 30px;
+            background: rgba(0, 0, 0, 0.9);
+            color: #fff;
             padding: 12px 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+            border-left: 4px solid #46d369;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
             opacity: 0;
             transition: opacity 0.3s;
             z-index: 999;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         .saved-indicator.show {
             opacity: 1;
         }
+
+        .saved-indicator::before {
+            content: '✓';
+            color: #46d369;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .navbar {
+                padding: 0 20px;
+            }
+
+            .video-title {
+                padding: 15px 20px;
+                font-size: 20px;
+            }
+
+            .player-info {
+                padding: 20px;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .dialog {
+                padding: 30px 20px;
+            }
+
+            .dialog h2 {
+                font-size: 22px;
+            }
+        }
     </style>
 </head>
 <body>
+    <!-- Saved Position Indicator -->
     <div class="saved-indicator" id="savedIndicator">
-        ✓ 시청 위치 저장됨
+        시청 위치 저장됨
     </div>
 
     <!-- Resume Dialog -->
     <div class="dialog-overlay" id="resumeDialog">
         <div class="dialog">
-            <h2>🎬 비디오 재생</h2>
+            <h2>이어서 시청하기</h2>
             <p>
                 이전에 시청한 기록이 있습니다.<br>
                 마지막 시청 위치: <strong id="resumePosition">0:00</strong>
@@ -199,10 +299,18 @@
         </div>
     </div>
 
-    <div class="container">
-        <a href="/" class="back-btn">← 비디오 목록으로</a>
+    <!-- Navigation Bar -->
+    <nav class="navbar" id="navbar">
+        <div class="logo" onclick="window.location.href='/'">HOFLIX</div>
+        <a href="/" class="back-btn">
+            <span>←</span>
+            <span>목록으로</span>
+        </a>
+    </nav>
 
-        <h1 id="videoTitle">비디오 플레이어</h1>
+    <!-- Main Container -->
+    <div class="container">
+        <h1 class="video-title" id="videoTitle">비디오 플레이어</h1>
 
         <div class="video-container">
             <video id="player" controls>
@@ -210,23 +318,27 @@
             </video>
         </div>
 
-        <div class="status">
-            <h3 style="margin-bottom: 10px; color: #333;">📊 재생 상태</h3>
-            <div class="status-item">
-                <span class="status-label">현재 시간:</span>
-                <span class="status-value" id="currentTime">0:00</span>
-            </div>
-            <div class="status-item">
-                <span class="status-label">전체 시간:</span>
-                <span class="status-value" id="duration">0:00</span>
-            </div>
-            <div class="status-item">
-                <span class="status-label">시청 진행률:</span>
-                <span class="status-value" id="progress">0%</span>
-            </div>
-            <div class="status-item">
-                <span class="status-label">마지막 저장:</span>
-                <span class="status-value" id="lastSaved">-</span>
+        <div class="player-info">
+            <div class="info-section">
+                <h3>재생 정보</h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-label">현재 시간</div>
+                        <div class="stat-value" id="currentTime">0:00</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">전체 시간</div>
+                        <div class="stat-value" id="duration">0:00</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">시청 진행률</div>
+                        <div class="stat-value" id="progress">0%</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">마지막 저장</div>
+                        <div class="stat-value" id="lastSaved">-</div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -239,6 +351,16 @@
 
         let lastPosition = 0;
         let saveInterval = null;
+
+        // Navbar scroll effect
+        window.addEventListener('scroll', () => {
+            const navbar = document.getElementById('navbar');
+            if (window.scrollY > 50) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+        });
 
         // Format time (seconds → MM:SS)
         function formatTime(seconds) {
@@ -333,7 +455,7 @@
             player.appendChild(source);
 
             // Set title (remove extension)
-            const title = filename.replace(/\.[^/.]+$/, '');
+            const title = decodeURIComponent(filename).replace(/\.[^/.]+$/, '');
             document.getElementById('videoTitle').textContent = title;
 
             // Check watch history after video metadata loaded
