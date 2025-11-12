@@ -7,6 +7,7 @@
 
 #include "../include/database.h"
 #include "../include/crypto.h"
+#include "../include/json.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -340,6 +341,37 @@ int register_video(const char* filename, const char* title, long file_size) {
 }
 
 /**
+ * Update video metadata (duration and thumbnail_path)
+ */
+int update_video_metadata(const char* filename, int duration, const char* thumbnail_path) {
+    if (!db) return -1;
+
+    sqlite3_stmt* stmt;
+    const char* sql = "UPDATE videos SET duration = ?, thumbnail_path = ? WHERE filename = ?";
+
+    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "  [DB] Failed to prepare UPDATE statement\n");
+        return -1;
+    }
+
+    sqlite3_bind_int(stmt, 1, duration);
+    sqlite3_bind_text(stmt, 2, thumbnail_path, -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 3, filename, -1, SQLITE_TRANSIENT);
+
+    rc = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+
+    if (rc == SQLITE_DONE) {
+        printf("  [DB] Updated metadata for %s: duration=%ds, thumbnail=%s\n",
+               filename, duration, thumbnail_path);
+        return 0;
+    }
+
+    return -1;
+}
+
+/**
  * Get watch position for user/video (Phase 3)
  */
 int get_watch_position(int user_id, int video_id) {
@@ -434,47 +466,25 @@ int get_videos_with_history(int user_id, char* json_output, size_t max_len) {
         long file_size = sqlite3_column_int64(stmt, 5);
         int last_position = sqlite3_column_int(stmt, 6);
 
-        // Escape strings for JSON
+        // Escape strings for JSON using json_escape_string()
         char escaped_title[512];
         char escaped_filename[512];
         char escaped_thumbnail[512];
 
-        // Simple escape (replace " with \")
-        const char* src;
-        char* dst;
-
-        // Escape title
-        src = title;
-        dst = escaped_title;
-        while (*src && dst - escaped_title < 510) {
-            if (*src == '"') {
-                *dst++ = '\\';
-            }
-            *dst++ = *src++;
+        if (json_escape_string(title, escaped_title, sizeof(escaped_title)) != 0) {
+            fprintf(stderr, "[ERROR] Failed to escape title: %s\n", title);
+            strncpy(escaped_title, "Error", sizeof(escaped_title) - 1);
         }
-        *dst = '\0';
 
-        // Escape filename
-        src = filename;
-        dst = escaped_filename;
-        while (*src && dst - escaped_filename < 510) {
-            if (*src == '"') {
-                *dst++ = '\\';
-            }
-            *dst++ = *src++;
+        if (json_escape_string(filename, escaped_filename, sizeof(escaped_filename)) != 0) {
+            fprintf(stderr, "[ERROR] Failed to escape filename: %s\n", filename);
+            strncpy(escaped_filename, "Error", sizeof(escaped_filename) - 1);
         }
-        *dst = '\0';
 
-        // Escape thumbnail
-        src = thumbnail;
-        dst = escaped_thumbnail;
-        while (*src && dst - escaped_thumbnail < 510) {
-            if (*src == '"') {
-                *dst++ = '\\';
-            }
-            *dst++ = *src++;
+        if (json_escape_string(thumbnail, escaped_thumbnail, sizeof(escaped_thumbnail)) != 0) {
+            fprintf(stderr, "[ERROR] Failed to escape thumbnail: %s\n", thumbnail);
+            strncpy(escaped_thumbnail, "Error", sizeof(escaped_thumbnail) - 1);
         }
-        *dst = '\0';
 
         // Add video JSON object
         offset += snprintf(json_output + offset, max_len - offset,

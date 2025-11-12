@@ -2,13 +2,14 @@
  * OTT Streaming Server - Video Scanner
  *
  * Automatically scan videos directory and register to database
- * Enhancement Phase 3
+ * Enhancement Phase 3 - Updated with FFmpeg integration
  * Author: Generated for Network Programming Final Project
- * Date: 2025-11-03
+ * Date: 2025-11-10
  */
 
 #include "../include/server.h"
 #include "../include/database.h"
+#include "../include/ffmpeg_utils.h"
 #include <dirent.h>
 #include <sys/stat.h>
 
@@ -130,13 +131,91 @@ int scan_and_register_videos(const char* video_dir) {
 }
 
 /**
- * Update video metadata (duration, thumbnail) - Placeholder for FFmpeg integration
+ * Update video metadata (duration, thumbnail) for all videos in directory using FFmpeg
+ * Batch operation that scans directory and updates all video files
  */
-void update_video_metadata(const char* video_dir) {
-    // TODO: Phase 3 - FFmpeg integration
-    // - Extract video duration
-    // - Generate thumbnail
-    // - Update database
+void update_all_video_metadata(const char* video_dir) {
+    DIR* dir;
+    struct dirent* entry;
+    int updated_count = 0;
 
-    printf("ℹ️  Video metadata update (FFmpeg) - Not implemented yet\n");
+    printf("🎬 Updating video metadata with FFmpeg...\n");
+
+    dir = opendir(video_dir);
+    if (!dir) {
+        fprintf(stderr, "⚠️  Cannot open video directory: %s\n", video_dir);
+        return;
+    }
+
+    // Create thumbnails directory if it doesn't exist
+    #ifdef _WIN32
+        system("if not exist thumbnails mkdir thumbnails");
+    #else
+        system("mkdir -p thumbnails");
+    #endif
+
+    // Process each video file
+    while ((entry = readdir(dir)) != NULL) {
+        // Skip . and ..
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+            continue;
+        }
+
+        // Check if file is a video
+        if (ends_with(entry->d_name, ".mp4") ||
+            ends_with(entry->d_name, ".mkv") ||
+            ends_with(entry->d_name, ".avi") ||
+            ends_with(entry->d_name, ".mov")) {
+
+            // Build full video path
+            char video_path[512];
+            snprintf(video_path, sizeof(video_path), "%s/%s", video_dir, entry->d_name);
+
+            // Extract duration using FFmpeg
+            printf("  📊 Extracting duration for %s...\n", entry->d_name);
+            int duration = get_video_duration(video_path);
+            if (duration < 0) {
+                fprintf(stderr, "  ⚠️  Failed to extract duration for %s\n", entry->d_name);
+                duration = 0;
+            } else {
+                printf("  ✓ Duration: %d seconds (%d:%02d)\n",
+                       duration, duration/60, duration%60);
+            }
+
+            // Generate thumbnail filename
+            char thumbnail_filename[256];
+            char* ext = strrchr(entry->d_name, '.');
+            if (ext) {
+                size_t name_len = ext - entry->d_name;
+                strncpy(thumbnail_filename, entry->d_name, name_len);
+                thumbnail_filename[name_len] = '\0';
+                strcat(thumbnail_filename, ".jpg");
+            } else {
+                snprintf(thumbnail_filename, sizeof(thumbnail_filename), "%s.jpg", entry->d_name);
+            }
+
+            // Build thumbnail path
+            char thumbnail_path[512];
+            snprintf(thumbnail_path, sizeof(thumbnail_path), "thumbnails/%s", thumbnail_filename);
+
+            // Generate thumbnail using FFmpeg
+            printf("  🖼️  Generating thumbnail for %s...\n", entry->d_name);
+            if (generate_thumbnail_default(video_path, thumbnail_path) == 0) {
+                printf("  ✓ Thumbnail created: %s\n", thumbnail_path);
+            } else {
+                fprintf(stderr, "  ⚠️  Failed to generate thumbnail for %s\n", entry->d_name);
+                // Use placeholder path if thumbnail generation fails
+                strcpy(thumbnail_path, "thumbnails/placeholder.jpg");
+            }
+
+            // Update database
+            if (update_video_metadata(entry->d_name, duration, thumbnail_path) == 0) {
+                updated_count++;
+            }
+        }
+    }
+
+    closedir(dir);
+
+    printf("✅ Metadata update complete: %d videos updated\n", updated_count);
 }

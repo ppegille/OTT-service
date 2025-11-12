@@ -48,3 +48,11 @@ temp/
 *.ilk
 *.suo
 *.user
+
+# Korean filename temp files and archives
+*네프*
+*프로젝트*.zip
+
+# Claude local settings
+.claude/settings.local.json
+.claude/*.local.*

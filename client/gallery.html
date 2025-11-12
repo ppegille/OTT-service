@@ -410,6 +410,31 @@
             `;
         }
 
+        // Load user information
+        async function loadUserInfo() {
+            try {
+                const response = await fetch('/api/user');
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+
+                // Update username display
+                const usernameElement = document.getElementById('username');
+                if (data.username) {
+                    usernameElement.textContent = data.username;
+                } else {
+                    usernameElement.textContent = 'User';
+                }
+            } catch (error) {
+                console.error('Failed to load user info:', error);
+                // Fallback to generic display on error
+                document.getElementById('username').textContent = 'User';
+            }
+        }
+
         // Load videos from API
         async function loadVideos() {
             try {
@@ -456,8 +481,9 @@
             }
         }
 
-        // Load videos when page loads
+        // Load videos and user info when page loads
         window.addEventListener('DOMContentLoaded', () => {
+            loadUserInfo();
             loadVideos();
         });
     </script>

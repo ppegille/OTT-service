@@ -27,7 +27,34 @@ void sha256_hash(const char* input, char* output_hex) {
 }
 
 /**
+ * Constant-time string comparison to prevent timing attacks
+ *
+ * Uses volatile variable to prevent compiler optimization that could
+ * introduce timing variations based on input differences.
+ *
+ * @param a First string to compare
+ * @param b Second string to compare
+ * @param len Length to compare (should be SHA256_HEX_LENGTH for password hashes)
+ * @return 1 if strings are equal, 0 if different
+ *
+ * Security note: This function takes the same amount of time regardless of
+ * where the strings differ, preventing timing attacks that could be used
+ * to progressively guess password hashes.
+ */
+static int constant_time_compare(const char* a, const char* b, size_t len) {
+    volatile unsigned char result = 0;
+
+    for (size_t i = 0; i < len; i++) {
+        result |= (unsigned char)a[i] ^ (unsigned char)b[i];
+    }
+
+    return result == 0;
+}
+
+/**
  * Verify password against stored hash
+ *
+ * Uses constant-time comparison to prevent timing attacks.
  */
 int verify_password(const char* input_password, const char* stored_hash) {
     char computed_hash[SHA256_HEX_LENGTH];
@@ -35,6 +62,6 @@ int verify_password(const char* input_password, const char* stored_hash) {
     // Hash the input password
     sha256_hash(input_password, computed_hash);
 
-    // Compare with stored hash (constant-time comparison would be better for production)
-    return (strcmp(computed_hash, stored_hash) == 0) ? 1 : 0;
+    // Use constant-time comparison to prevent timing attacks
+    return constant_time_compare(computed_hash, stored_hash, SHA256_HEX_LENGTH - 1);
 }

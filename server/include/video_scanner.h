@@ -14,10 +14,10 @@
 int scan_and_register_videos(const char* video_dir);
 
 /**
- * Update video metadata (duration, thumbnail) using FFmpeg
- * Placeholder for Phase 3 FFmpeg integration
+ * Update video metadata (duration, thumbnail) for all videos in directory using FFmpeg
+ * Batch operation that scans directory and updates all video files
  */
-void update_video_metadata(const char* video_dir);
+void update_all_video_metadata(const char* video_dir);
 
 /**
  * Get file size in bytes

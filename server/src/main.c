@@ -58,8 +58,13 @@ int main() {
     scan_and_register_videos("../videos");
     printf("\n");
 
+    // Extract video metadata (duration, thumbnails) using FFmpeg
+    printf("Step 2: Extracting video metadata...\n");
+    update_all_video_metadata("../videos");
+    printf("\n");
+
     // Initialize session store
-    printf("Step 2: Initializing session store...\n");
+    printf("Step 3: Initializing session store...\n");
     init_session_store();
     printf("\n");
 
@@ -78,8 +83,8 @@ int main() {
     signal(SIGTERM, sigint_handler);
     atexit(cleanup_handler);
 
-    // Step 1: Create socket
-    printf("Step 1: Creating socket...\n");
+    // Step 4: Create socket
+    printf("Step 4: Creating socket...\n");
     server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server_fd < 0) {
         perror("Socket creation failed");
@@ -94,8 +99,8 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    // Step 2: Bind to port
-    printf("Step 2: Binding to port %d...\n", PORT);
+    // Step 5: Bind to port
+    printf("Step 5: Binding to port %d...\n", PORT);
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = INADDR_ANY;
@@ -108,8 +113,8 @@ int main() {
     }
     printf("✓ Successfully bound to port %d\n\n", PORT);
 
-    // Step 3: Listen for connections
-    printf("Step 3: Listening for connections...\n");
+    // Step 6: Listen for connections
+    printf("Step 6: Listening for connections...\n");
     if (listen(server_fd, 10) < 0) {
         perror("Listen failed");
         close(server_fd);
@@ -162,6 +167,14 @@ int main() {
             HTTPRequest req = parse_http_request(buffer);
             printf("  [Child %d] %s %s\n", getpid(), req.method, req.path);
 
+            // Security: Validate path to prevent directory traversal attacks
+            if (!is_path_safe(req.path)) {
+                send_403(client_fd, "Directory traversal attempt detected");
+                close(client_fd);
+                printf("  [Child %d] Connection closed (security violation)\n\n", getpid());
+                exit(0);
+            }
+
             // Handle POST /login (authentication endpoint)
             if (strcmp(req.method, "POST") == 0 && strcmp(req.path, "/login") == 0) {
                 printf("  [DEBUG] POST /login received\n");
@@ -190,11 +203,18 @@ int main() {
             }
 
             // For all other requests, check session
-            const char* cookie_header = find_header(buffer, "Cookie");
-            printf("  [DEBUG] Cookie header: '%s'\n", cookie_header ? cookie_header : "(null)");
+            char cookie_header[256];
+            char session_id[SESSION_ID_LENGTH];
 
-            char* session_id = parse_cookie(cookie_header);
-            printf("  [DEBUG] Parsed session_id: '%s'\n", session_id ? session_id : "(null)");
+            if (!find_header(buffer, "Cookie", cookie_header, sizeof(cookie_header))) {
+                cookie_header[0] = '\0';
+            }
+            printf("  [DEBUG] Cookie header: '%s'\n", cookie_header[0] ? cookie_header : "(null)");
+
+            if (!parse_cookie(cookie_header, session_id, sizeof(session_id))) {
+                session_id[0] = '\0';
+            }
+            printf("  [DEBUG] Parsed session_id: '%s'\n", session_id[0] ? session_id : "(null)");
 
             if (!validate_session(session_id)) {
                 // No valid session - redirect to login
@@ -223,6 +243,24 @@ int main() {
                     send_json_response(client_fd, json_output);
                 } else {
                     send_json_error(client_fd, 500, "Internal server error");
+                }
+
+                close(client_fd);
+                printf("  [Child %d] Connection closed\n\n", getpid());
+                exit(0);
+            }
+
+            // GET /api/user - Return current user information
+            if (strcmp(req.method, "GET") == 0 && strcmp(req.path, "/api/user") == 0) {
+                char username[USER_ID_LENGTH];
+
+                if (get_username_from_session(session_id, username, sizeof(username)) == 0) {
+                    char json_output[256];
+                    snprintf(json_output, sizeof(json_output),
+                             "{\"username\":\"%s\"}", username);
+                    send_json_response(client_fd, json_output);
+                } else {
+                    send_json_error(client_fd, 401, "Unauthorized: Invalid session");
                 }
 
                 close(client_fd);
@@ -298,6 +336,7 @@ int main() {
 
             // Determine filename
             char video_path[MAX_PATH];
+            char thumbnail_path[MAX_PATH];
             char css_path[MAX_PATH];
             char js_path[MAX_PATH];
             char client_path[MAX_PATH];
@@ -309,6 +348,10 @@ int main() {
             } else if (strncmp(req.path, "/videos/", 8) == 0) {
                 snprintf(video_path, MAX_PATH, "../%s", req.path + 1);
                 filename = video_path;
+            } else if (strncmp(req.path, "/thumbnails/", 12) == 0) {
+                // Serve thumbnail images (stored in server/thumbnails/)
+                snprintf(thumbnail_path, MAX_PATH, "%s", req.path + 1);
+                filename = thumbnail_path;
             } else if (strncmp(req.path, "/css/", 5) == 0) {
                 snprintf(css_path, MAX_PATH, "../client/%s", req.path + 1);
                 filename = css_path;
@@ -322,8 +365,12 @@ int main() {
             }
 
             // Check for Range header
-            const char* range_header = find_header(buffer, "Range");
-            req.range = parse_range(range_header);
+            char range_header[256];
+            if (find_header(buffer, "Range", range_header, sizeof(range_header))) {
+                req.range = parse_range(range_header);
+            } else {
+                req.range = parse_range(NULL);
+            }
 
             // Stream the file
             stream_file(client_fd, filename, req.range);

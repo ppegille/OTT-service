@@ -67,10 +67,14 @@ HTTPRequest parse_http_request(const char* request) {
 
 /**
  * Find header value in HTTP request
- * Returns static buffer (not thread-safe in current MVP)
+ * Thread-safe: uses caller-provided buffer
+ * Returns: 1 if found, 0 if not found
  */
-const char* find_header(const char* request, const char* header_name) {
-    static char value[256];
+int find_header(const char* request, const char* header_name, char* value, size_t value_size) {
+    if (!request || !header_name || !value || value_size == 0) {
+        return 0;
+    }
+
     char search[128];
 
     // Search for header (case-insensitive)
@@ -81,22 +85,28 @@ const char* find_header(const char* request, const char* header_name) {
         // Try without newline (first header)
         snprintf(search, sizeof(search), "%s: ", header_name);
         header_start = strcasestr(request, search);
-        if (!header_start) return NULL;
+        if (!header_start) {
+            value[0] = '\0';
+            return 0;
+        }
     } else {
         header_start++;  // Skip the newline
     }
 
     header_start += strlen(header_name) + 2;  // Skip "Name: "
     const char* header_end = strstr(header_start, "\r\n");
-    if (!header_end) return NULL;
+    if (!header_end) {
+        value[0] = '\0';
+        return 0;
+    }
 
     size_t len = header_end - header_start;
-    if (len >= sizeof(value)) len = sizeof(value) - 1;
+    if (len >= value_size) len = value_size - 1;
 
     strncpy(value, header_start, len);
     value[len] = '\0';
 
-    return value;
+    return 1;
 }
 
 /**
@@ -115,6 +125,58 @@ const char* get_mime_type(const char* filename) {
     if (strcmp(ext, ".png") == 0) return "image/png";
 
     return "application/octet-stream";
+}
+
+/**
+ * Validate path for security (Directory Traversal Prevention)
+ *
+ * Checks for dangerous patterns like ../ or ..\ that could allow
+ * attackers to access files outside the intended directory.
+ *
+ * Note: HTTP paths starting with / are normal (e.g., /login, /api/videos)
+ * This function checks for directory traversal, not URL format.
+ *
+ * Returns: 1 if path is safe, 0 if dangerous
+ */
+int is_path_safe(const char* path) {
+    if (!path) {
+        return 0;
+    }
+
+    // Check for directory traversal patterns: ../ or ..\ (backslash)
+    if (strstr(path, "../") != NULL || strstr(path, "..\\") != NULL) {
+        fprintf(stderr, "[SECURITY] Directory traversal attempt detected: %s\n", path);
+        return 0;
+    }
+
+    // Check for encoded directory traversal patterns
+    if (strstr(path, "%2e%2e") != NULL || strstr(path, "%2E%2E") != NULL) {
+        fprintf(stderr, "[SECURITY] Encoded directory traversal attempt: %s\n", path);
+        return 0;
+    }
+
+    return 1;  // Path is safe
+}
+
+/**
+ * Send 403 Forbidden response
+ */
+void send_403(int client_fd, const char* reason) {
+    char response[512];
+    const char* message = reason ? reason : "Forbidden: Access denied";
+
+    snprintf(response, sizeof(response),
+        "HTTP/1.1 403 Forbidden\r\n"
+        "Content-Type: text/html; charset=utf-8\r\n"
+        "Content-Length: %zu\r\n"
+        "Connection: close\r\n"
+        "\r\n"
+        "<html><body><h1>403 Forbidden</h1><p>%s</p></body></html>",
+        strlen("<html><body><h1>403 Forbidden</h1><p></p></body></html>") + strlen(message),
+        message);
+
+    send(client_fd, response, strlen(response), 0);
+    printf("  → 403 Forbidden: %s\n", message);
 }
 
 /**

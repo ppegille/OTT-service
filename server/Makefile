@@ -11,7 +11,7 @@ CFLAGS = -Wall -Wextra -g -Iinclude
 LDFLAGS = -lpthread -lsqlite3 -lcrypto
 
 # Source files
-SRCS = src/main.c src/http.c src/streaming.c src/session.c src/database.c src/crypto.c src/json.c src/video_scanner.c
+SRCS = src/main.c src/http.c src/streaming.c src/session.c src/database.c src/crypto.c src/json.c src/video_scanner.c src/ffmpeg_utils.c
 OBJS = $(SRCS:.c=.o)
 
 # Target executable

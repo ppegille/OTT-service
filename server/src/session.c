@@ -90,33 +90,55 @@ void cleanup_session_store() {
 }
 
 /**
- * Generate UUID-like session ID
- * Format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+ * Generate cryptographically secure session ID
+ * Uses /dev/urandom for secure randomness (Unix/Linux/macOS)
+ * Format: 32 hexadecimal characters (128 bits of entropy)
  */
 void generate_session_id(char* session_id) {
+    unsigned char random_bytes[16];  // 128 bits
     const char* hex_chars = "0123456789abcdef";
 
-    for (int i = 0; i < SESSION_ID_LENGTH - 1; i++) {
-        if (i == 8 || i == 13 || i == 18 || i == 23) {
-            session_id[i] = '-';
-        } else if (i == 14) {
-            session_id[i] = '4';  // UUID version 4
-        } else if (i == 19) {
-            session_id[i] = hex_chars[(rand() % 4) + 8];  // y = 8, 9, a, or b
-        } else {
-            session_id[i] = hex_chars[rand() % 16];
+    // Open /dev/urandom for cryptographically secure random bytes
+    FILE* urandom = fopen("/dev/urandom", "rb");
+    if (!urandom) {
+        // Fallback: use time + process ID for less secure but working alternative
+        fprintf(stderr, "[WARNING] Cannot open /dev/urandom, using weak fallback\n");
+        srand(time(NULL) ^ getpid());
+        for (int i = 0; i < 16; i++) {
+            random_bytes[i] = (unsigned char)(rand() % 256);
+        }
+    } else {
+        // Read 16 random bytes from /dev/urandom
+        size_t bytes_read = fread(random_bytes, 1, 16, urandom);
+        fclose(urandom);
+
+        if (bytes_read != 16) {
+            fprintf(stderr, "[ERROR] Failed to read from /dev/urandom\n");
+            // Fallback to weak randomness
+            srand(time(NULL) ^ getpid());
+            for (int i = 0; i < 16; i++) {
+                random_bytes[i] = (unsigned char)(rand() % 256);
+            }
         }
     }
-    session_id[SESSION_ID_LENGTH - 1] = '\0';
+
+    // Convert to hexadecimal string (32 chars + null terminator)
+    for (int i = 0; i < 16; i++) {
+        session_id[i * 2] = hex_chars[(random_bytes[i] >> 4) & 0x0F];
+        session_id[i * 2 + 1] = hex_chars[random_bytes[i] & 0x0F];
+    }
+    session_id[32] = '\0';
 }
 
 /**
  * Create new session for user
  * Thread-safe with semaphore
- * Returns: pointer to session_id (static buffer), or NULL on failure
+ * Returns: 1 on success, 0 on failure
  */
-char* create_session(int user_id, const char* username) {
-    static char session_id_buffer[SESSION_ID_LENGTH];
+int create_session(int user_id, const char* username, char* session_id_out, size_t session_id_size) {
+    if (!username || !session_id_out || session_id_size < SESSION_ID_LENGTH) {
+        return 0;
+    }
 
     // Lock semaphore
     sem_wait(session_sem);
@@ -145,7 +167,7 @@ char* create_session(int user_id, const char* username) {
         if (session_store->session_count >= MAX_SESSIONS) {
             printf("❌ Cannot create session: store still full\n");
             sem_post(session_sem);  // Unlock
-            return NULL;
+            return 0;
         }
     }
 
@@ -161,7 +183,7 @@ char* create_session(int user_id, const char* username) {
     if (slot == -1) {
         printf("❌ Cannot create session: no available slot\n");
         sem_post(session_sem);  // Unlock
-        return NULL;
+        return 0;
     }
 
     // Generate session ID
@@ -177,16 +199,17 @@ char* create_session(int user_id, const char* username) {
 
     session_store->session_count++;
 
-    // Copy to static buffer before unlocking
-    strncpy(session_id_buffer, session_store->sessions[slot].session_id, SESSION_ID_LENGTH);
+    // Copy to caller's buffer before unlocking
+    strncpy(session_id_out, session_store->sessions[slot].session_id, session_id_size - 1);
+    session_id_out[session_id_size - 1] = '\0';
 
     printf("✓ Session created: %s for user '%s' (ID: %d, total: %d)\n",
-           session_id_buffer, username, user_id, session_store->session_count);
+           session_id_out, username, user_id, session_store->session_count);
 
     // Unlock semaphore
     sem_post(session_sem);
 
-    return session_id_buffer;
+    return 1;
 }
 
 /**
@@ -313,32 +336,32 @@ void cleanup_expired_sessions() {
 /**
  * Parse Cookie header and extract session_id
  * Cookie: session_id=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
- * Returns: pointer to session_id (static buffer), or NULL if not found
+ * Thread-safe: uses caller-provided buffer
+ * Returns: 1 if found, 0 if not found
  */
-char* parse_cookie(const char* cookie_header) {
-    static char session_id[SESSION_ID_LENGTH];
-
-    if (!cookie_header) {
-        return NULL;
+int parse_cookie(const char* cookie_header, char* session_id, size_t session_id_size) {
+    if (!cookie_header || !session_id || session_id_size == 0) {
+        return 0;
     }
 
     // Find "session_id=" in cookie header
     const char* start = strstr(cookie_header, "session_id=");
     if (!start) {
-        return NULL;
+        session_id[0] = '\0';
+        return 0;
     }
 
     start += strlen("session_id=");
 
     // Extract session ID until semicolon or end of string
-    int i = 0;
-    while (start[i] != ';' && start[i] != '\0' && start[i] != '\r' && start[i] != '\n' && i < SESSION_ID_LENGTH - 1) {
+    size_t i = 0;
+    while (start[i] != ';' && start[i] != '\0' && start[i] != '\r' && start[i] != '\n' && i < session_id_size - 1) {
         session_id[i] = start[i];
         i++;
     }
     session_id[i] = '\0';
 
-    return session_id;
+    return (i > 0) ? 1 : 0;
 }
 
 /**
@@ -354,13 +377,12 @@ void generate_set_cookie_header(char* buffer, const char* session_id) {
 /**
  * Parse POST request body and extract parameter value
  * Body format: param1=value1&param2=value2
- * Returns: pointer to value (static buffer), or NULL if not found
+ * Thread-safe: uses caller-provided buffer
+ * Returns: 1 if found, 0 if not found
  */
-char* parse_post_body(const char* body, const char* param_name) {
-    static char value[USER_ID_LENGTH];
-
-    if (!body || !param_name) {
-        return NULL;
+int parse_post_body(const char* body, const char* param_name, char* value, size_t value_size) {
+    if (!body || !param_name || !value || value_size == 0) {
+        return 0;
     }
 
     // Find parameter in body
@@ -369,27 +391,28 @@ char* parse_post_body(const char* body, const char* param_name) {
 
     const char* start = strstr(body, search_str);
     if (!start) {
-        return NULL;
+        value[0] = '\0';
+        return 0;
     }
 
     start += strlen(search_str);
 
     // Extract value until & or end of string
-    int i = 0;
-    while (start[i] != '&' && start[i] != '\0' && start[i] != '\r' && start[i] != '\n' && i < USER_ID_LENGTH - 1) {
+    size_t i = 0;
+    while (start[i] != '&' && start[i] != '\0' && start[i] != '\r' && start[i] != '\n' && i < value_size - 1) {
         value[i] = start[i];
         i++;
     }
     value[i] = '\0';
 
     // URL decode if needed (for simplicity, just handle spaces)
-    for (int j = 0; j < i; j++) {
+    for (size_t j = 0; j < i; j++) {
         if (value[j] == '+') {
             value[j] = ' ';
         }
     }
 
-    return value;
+    return (i > 0) ? 1 : 0;
 }
 
 /**
@@ -446,24 +469,15 @@ void handle_login(int client_fd, const char* request_body) {
     // Debug: print request body
     printf("  [DEBUG] POST body: '%s'\n", request_body ? request_body : "(null)");
 
-    // Parse username and password from POST body
-    // NOTE: parse_post_body uses static buffer, so we must copy immediately
+    // Parse username and password from POST body (thread-safe)
     char username[USER_ID_LENGTH];
     char password[USER_ID_LENGTH];
 
-    char* tmp = parse_post_body(request_body, "username");
-    if (tmp) {
-        strncpy(username, tmp, USER_ID_LENGTH - 1);
-        username[USER_ID_LENGTH - 1] = '\0';
-    } else {
+    if (!parse_post_body(request_body, "username", username, sizeof(username))) {
         username[0] = '\0';
     }
 
-    tmp = parse_post_body(request_body, "password");
-    if (tmp) {
-        strncpy(password, tmp, USER_ID_LENGTH - 1);
-        password[USER_ID_LENGTH - 1] = '\0';
-    } else {
+    if (!parse_post_body(request_body, "password", password, sizeof(password))) {
         password[0] = '\0';
     }
 
@@ -493,10 +507,9 @@ void handle_login(int client_fd, const char* request_body) {
     // Update last login time
     update_last_login(user_id);
 
-    // Create session
-    char* session_id = create_session(user_id, username);
-
-    if (!session_id) {
+    // Create session (thread-safe)
+    char session_id[SESSION_ID_LENGTH];
+    if (!create_session(user_id, username, session_id, sizeof(session_id))) {
         printf("❌ Login failed: cannot create session\n");
         send_login_error(client_fd, "Server error: Cannot create session");
         return;
@@ -548,4 +561,34 @@ int get_user_id_from_session(const char* session_id) {
     sem_post(session_sem);
 
     return user_id;
+}
+
+/**
+ * Get username from session
+ * Returns 0 on success, -1 on failure
+ */
+int get_username_from_session(const char* session_id, char* username_out, size_t username_size) {
+    if (!session_id || strlen(session_id) == 0 || !username_out || username_size == 0) {
+        return -1;
+    }
+
+    // Lock semaphore
+    sem_wait(session_sem);
+
+    int found = 0;
+
+    for (int i = 0; i < MAX_SESSIONS; i++) {
+        if (session_store->sessions[i].is_active &&
+            strcmp(session_store->sessions[i].session_id, session_id) == 0) {
+            strncpy(username_out, session_store->sessions[i].username, username_size - 1);
+            username_out[username_size - 1] = '\0';
+            found = 1;
+            break;
+        }
+    }
+
+    // Unlock semaphore
+    sem_post(session_sem);
+
+    return found ? 0 : -1;
 }

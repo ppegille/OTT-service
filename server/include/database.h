@@ -41,6 +41,7 @@ int get_videos_with_history(int user_id, char* json_output, size_t max_len);
 int get_video_by_id(int video_id, Video* video);
 int get_video_by_filename(const char* filename, Video* video);
 int register_video(const char* filename, const char* title, long file_size);
+int update_video_metadata(const char* filename, int duration, const char* thumbnail_path);
 
 // Watch history functions (Phase 3)
 int get_watch_position(int user_id, int video_id);
