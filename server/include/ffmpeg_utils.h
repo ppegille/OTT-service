@@ -37,4 +37,26 @@ int generate_thumbnail(const char* video_path, const char* output_path, int time
  */
 int generate_thumbnail_default(const char* video_path, const char* output_path);
 
+/**
+ * Generate HLS playlist and segments from video file
+ *
+ * Creates HLS streaming segments at 720p quality (2800kbps)
+ * Optimized for fast transcoding and broad compatibility
+ *
+ * @param video_path Full path to source video file
+ * @param output_dir Directory to store HLS files (will be created if not exists)
+ * @param segment_duration Length of each segment in seconds
+ * @return 0 on success, -1 on error
+ */
+int generate_hls_playlist(const char* video_path, const char* output_dir, int segment_duration);
+
+/**
+ * Generate HLS playlist with default segment duration (10 seconds)
+ *
+ * @param video_path Full path to source video file
+ * @param output_dir Directory to store HLS files
+ * @return 0 on success, -1 on error
+ */
+int generate_hls_playlist_default(const char* video_path, const char* output_dir);
+
 #endif // FFMPEG_UTILS_H

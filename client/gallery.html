@@ -4,46 +4,55 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hoflix - Browse</title>
+    <link rel="stylesheet" href="/css/common.css">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            background: #141414;
-            color: #fff;
-            min-height: 100vh;
-        }
-
-        /* Header / Navbar */
-        .navbar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 70px;
-            background: linear-gradient(180deg, rgba(0, 0, 0, 0.7) 10%, transparent);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 60px;
-            z-index: 100;
-            transition: background 0.3s;
-        }
-
-        .navbar.scrolled {
-            background: #141414;
-        }
-
+        /* Gallery Page Specific Styles */
         .navbar .logo {
             font-size: 32px;
-            font-weight: 700;
-            color: #E50914;
-            letter-spacing: -1px;
-            cursor: pointer;
+        }
+
+        .navbar .nav-center {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            padding: 0 40px;
+        }
+
+        .navbar .search-box {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .navbar .search-input {
+            width: 100%;
+            padding: 10px 40px 10px 16px;
+            background: rgba(0, 0, 0, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+            color: #fff;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .navbar .search-input:focus {
+            outline: none;
+            border-color: #fff;
+            background: rgba(0, 0, 0, 0.9);
+        }
+
+        .navbar .search-input::placeholder {
+            color: #888;
+        }
+
+        .navbar .search-icon {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #888;
+            font-size: 16px;
+            pointer-events: none;
         }
 
         .navbar .user-section {
@@ -234,6 +243,40 @@
             letter-spacing: 0.5px;
         }
 
+        /* Watchlist button */
+        .watchlist-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 40px;
+            height: 40px;
+            background: rgba(0, 0, 0, 0.75);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 20;
+            transition: all 0.3s;
+            font-size: 18px;
+        }
+
+        .watchlist-btn:hover {
+            background: rgba(0, 0, 0, 0.9);
+            border-color: #fff;
+            transform: scale(1.1);
+        }
+
+        .watchlist-btn.in-watchlist {
+            background: rgba(229, 9, 20, 0.9);
+            border-color: #E50914;
+        }
+
+        .watchlist-btn.in-watchlist:hover {
+            background: #E50914;
+        }
+
         /* Progress bar */
         .progress-bar {
             width: 100%;
@@ -250,45 +293,7 @@
             transition: width 0.3s;
         }
 
-        /* Loading & Error states */
-        .loading {
-            text-align: center;
-            padding: 100px 20px;
-            color: #e5e5e5;
-            font-size: 18px;
-        }
-
-        .loading::after {
-            content: '...';
-            animation: dots 1.5s infinite;
-        }
-
-        @keyframes dots {
-            0%, 20% { content: '.'; }
-            40% { content: '..'; }
-            60%, 100% { content: '...'; }
-        }
-
-        .error {
-            background: rgba(229, 9, 20, 0.1);
-            border-left: 4px solid #E50914;
-            color: #e5e5e5;
-            padding: 40px;
-            border-radius: 4px;
-            margin: 40px 0;
-        }
-
-        .error h2 {
-            color: #E50914;
-            margin-bottom: 10px;
-            font-size: 24px;
-        }
-
-        .error p {
-            margin: 8px 0;
-            font-size: 14px;
-            line-height: 1.6;
-        }
+        /* Gallery-Specific Loading & Error states */
 
         .no-videos {
             text-align: center;
@@ -297,7 +302,7 @@
             font-size: 18px;
         }
 
-        /* Responsive */
+        /* Gallery Responsive Overrides */
         @media (max-width: 1200px) {
             .video-gallery {
                 grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -311,10 +316,6 @@
 
             .container {
                 padding: 90px 30px 40px;
-            }
-
-            .navbar .logo {
-                font-size: 24px;
             }
 
             .section-title {
@@ -332,6 +333,14 @@
     <!-- Navigation Bar -->
     <nav class="navbar" id="navbar">
         <div class="logo">HOFLIX</div>
+        <div class="nav-center">
+            <div class="search-box">
+                <input type="text" class="search-input" id="searchInput"
+                       placeholder="제목, 장르 검색..."
+                       onkeyup="handleSearch(event)">
+                <span class="search-icon">🔍</span>
+            </div>
+        </div>
         <div class="user-section">
             <span class="username" id="username">Loading...</span>
             <button class="logout-btn" onclick="logout()">로그아웃</button>
@@ -340,33 +349,32 @@
 
     <!-- Main Content -->
     <div class="container">
-        <h2 class="section-title">인기 콘텐츠</h2>
+        <!-- Continue Watching Section -->
+        <div id="continueWatchingSection" style="display: none;">
+            <h2 class="section-title">이어보기</h2>
+            <div class="video-gallery" id="continueWatchingGallery"></div>
+        </div>
+
+        <!-- Watchlist Section -->
+        <div id="watchlistSection" style="display: none;">
+            <h2 class="section-title">내가 찜한 콘텐츠</h2>
+            <div class="video-gallery" id="watchlistGallery"></div>
+        </div>
+
+        <!-- All Videos Section -->
+        <h2 class="section-title" id="sectionTitle">인기 콘텐츠</h2>
         <div class="video-gallery" id="videoGallery">
             <div class="loading">비디오 목록을 불러오는 중</div>
         </div>
     </div>
 
+    <script src="/js/utils.js"></script>
     <script>
-        // Navbar scroll effect
-        window.addEventListener('scroll', () => {
-            const navbar = document.getElementById('navbar');
-            if (window.scrollY > 50) {
-                navbar.classList.add('scrolled');
-            } else {
-                navbar.classList.remove('scrolled');
-            }
-        });
-
-        // Format duration from seconds to MM:SS
-        function formatDuration(seconds) {
-            if (!seconds || seconds === 0) return '0:00';
-            const mins = Math.floor(seconds / 60);
-            const secs = seconds % 60;
-            return `${mins}:${String(secs).padStart(2, '0')}`;
-        }
+        // Initialize navbar scroll effect
+        initNavbarScroll('navbar', 50);
 
         // Create video card HTML
-        function createVideoCard(video) {
+        function createVideoCard(video, inWatchlist = false) {
             const watchedPercent = video.duration > 0
                 ? Math.round(video.last_position / video.duration * 100)
                 : 0;
@@ -374,6 +382,10 @@
             return `
                 <div class="video-card" onclick="playVideo(${video.video_id}, '${video.filename}')">
                     <div class="video-thumbnail">
+                        <div class="watchlist-btn ${inWatchlist ? 'in-watchlist' : ''}"
+                             onclick="event.stopPropagation(); toggleWatchlist(${video.video_id}, this)">
+                            ${inWatchlist ? '❤️' : '🤍'}
+                        </div>
                         ${video.thumbnail && video.thumbnail !== ''
                             ? `<img src="${video.thumbnail}" alt="${video.title}">`
                             : `<div class="placeholder">🎬</div>`
@@ -435,6 +447,44 @@
             }
         }
 
+        // Load Continue Watching recommendations
+        async function loadRecommendations() {
+            try {
+                const response = await fetch('/api/recommendations');
+
+                if (!response.ok) {
+                    // If no recommendations or error, hide section
+                    document.getElementById('continueWatchingSection').style.display = 'none';
+                    return;
+                }
+
+                const data = await response.json();
+                const section = document.getElementById('continueWatchingSection');
+                const gallery = document.getElementById('continueWatchingGallery');
+
+                if (!data.recommendations || data.recommendations.length === 0) {
+                    section.style.display = 'none';
+                    return;
+                }
+
+                // Show section and render recommendation cards
+                section.style.display = 'block';
+                gallery.innerHTML = data.recommendations.map(video => {
+                    const inWatchlist = watchlistIds.has(video.video_id);
+                    // Reformat the video object to match createVideoCard expectations
+                    return createVideoCard({
+                        ...video,
+                        watched: true  // All recommendations are watched
+                    }, inWatchlist);
+                }).join('');
+
+                console.log(`Loaded ${data.recommendations.length} recommendations`);
+            } catch (error) {
+                console.error('Failed to load recommendations:', error);
+                document.getElementById('continueWatchingSection').style.display = 'none';
+            }
+        }
+
         // Load videos from API
         async function loadVideos() {
             try {
@@ -452,8 +502,11 @@
                     return;
                 }
 
-                // Render video cards
-                gallery.innerHTML = data.videos.map(video => createVideoCard(video)).join('');
+                // Render video cards with watchlist status
+                gallery.innerHTML = data.videos.map(video => {
+                    const inWatchlist = watchlistIds.has(video.video_id);
+                    return createVideoCard(video, inWatchlist);
+                }).join('');
 
                 console.log(`Loaded ${data.videos.length} videos`);
             } catch (error) {
@@ -473,17 +526,166 @@
             window.location.href = `/player.html?video_id=${videoId}&filename=${encodeURIComponent(filename)}`;
         }
 
+        // Search functionality with debouncing
+        const handleSearch = debounce(function(event) {
+            const query = event.target.value.trim();
+
+            if (query.length === 0) {
+                // Empty search - reload all videos
+                document.getElementById('sectionTitle').textContent = '인기 콘텐츠';
+                loadVideos();
+            } else if (query.length >= 2) {
+                // Perform search with at least 2 characters
+                performSearch(query);
+            }
+        }, 300);
+
+        async function performSearch(query) {
+            try {
+                const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+                const data = await response.json();
+
+                const gallery = document.getElementById('videoGallery');
+                const sectionTitle = document.getElementById('sectionTitle');
+
+                if (response.ok && data.results) {
+                    if (data.results.length === 0) {
+                        sectionTitle.textContent = `검색 결과: "${query}" (0개)`;
+                        gallery.innerHTML = '<div class="no-videos">검색 결과가 없습니다.</div>';
+                    } else {
+                        sectionTitle.textContent = `검색 결과: "${query}" (${data.count}개)`;
+                        gallery.innerHTML = data.results.map(video => {
+                            const inWatchlist = watchlistIds.has(video.video_id);
+                            return createVideoCard(video, inWatchlist);
+                        }).join('');
+                    }
+
+                    console.log(`Search for "${query}" returned ${data.count} results`);
+                } else {
+                    gallery.innerHTML = '<div class="error">검색 중 오류가 발생했습니다.</div>';
+                }
+            } catch (error) {
+                console.error('Search error:', error);
+                document.getElementById('videoGallery').innerHTML =
+                    '<div class="error">검색 중 오류가 발생했습니다.</div>';
+            }
+        }
+
         // Logout function
-        function logout() {
+        async function logout() {
             if (confirm('로그아웃 하시겠습니까?')) {
-                // TODO: Implement proper logout API endpoint
-                window.location.href = '/';
+                try {
+                    const response = await fetch('/api/logout', {
+                        method: 'POST',
+                        credentials: 'include'
+                    });
+
+                    if (response.ok) {
+                        // Redirect to login page after successful logout
+                        window.location.href = '/login.html';
+                    } else {
+                        alert('로그아웃에 실패했습니다.');
+                    }
+                } catch (error) {
+                    console.error('Logout error:', error);
+                    // Redirect anyway on error
+                    window.location.href = '/login.html';
+                }
+            }
+        }
+
+        // Watchlist management
+        let watchlistIds = new Set();
+
+        // Load watchlist
+        async function loadWatchlist() {
+            try {
+                const response = await fetch('/api/watchlist');
+                if (!response.ok) {
+                    document.getElementById('watchlistSection').style.display = 'none';
+                    return;
+                }
+
+                const data = await response.json();
+                const section = document.getElementById('watchlistSection');
+                const gallery = document.getElementById('watchlistGallery');
+
+                // Update watchlist IDs set
+                watchlistIds.clear();
+                if (data.watchlist) {
+                    data.watchlist.forEach(video => watchlistIds.add(video.video_id));
+                }
+
+                if (!data.watchlist || data.watchlist.length === 0) {
+                    section.style.display = 'none';
+                    return;
+                }
+
+                section.style.display = 'block';
+                gallery.innerHTML = data.watchlist.map(video => createVideoCard(video, true)).join('');
+
+                console.log(`Loaded ${data.watchlist.length} videos in watchlist`);
+            } catch (error) {
+                console.error('Failed to load watchlist:', error);
+                document.getElementById('watchlistSection').style.display = 'none';
+            }
+        }
+
+        // Toggle watchlist
+        async function toggleWatchlist(videoId, buttonElement) {
+            const isInWatchlist = watchlistIds.has(videoId);
+
+            try {
+                if (isInWatchlist) {
+                    // Remove from watchlist
+                    const response = await fetch(`/api/watchlist/${videoId}`, {
+                        method: 'DELETE'
+                    });
+
+                    if (response.ok) {
+                        watchlistIds.delete(videoId);
+                        buttonElement.classList.remove('in-watchlist');
+                        buttonElement.textContent = '🤍';
+                        console.log(`Removed video ${videoId} from watchlist`);
+
+                        // Reload watchlist section
+                        loadWatchlist();
+                    } else {
+                        alert('관심 목록에서 제거하지 못했습니다.');
+                    }
+                } else {
+                    // Add to watchlist
+                    const response = await fetch('/api/watchlist', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ video_id: videoId })
+                    });
+
+                    if (response.ok) {
+                        watchlistIds.add(videoId);
+                        buttonElement.classList.add('in-watchlist');
+                        buttonElement.textContent = '❤️';
+                        console.log(`Added video ${videoId} to watchlist`);
+
+                        // Reload watchlist section
+                        loadWatchlist();
+                    } else {
+                        alert('관심 목록에 추가하지 못했습니다.');
+                    }
+                }
+            } catch (error) {
+                console.error('Watchlist toggle error:', error);
+                alert('관심 목록 업데이트 중 오류가 발생했습니다.');
             }
         }
 
         // Load videos and user info when page loads
         window.addEventListener('DOMContentLoaded', () => {
             loadUserInfo();
+            loadRecommendations();  // Load Continue Watching section
+            loadWatchlist();         // Load Watchlist section
             loadVideos();
         });
     </script>

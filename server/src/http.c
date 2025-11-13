@@ -127,36 +127,7 @@ const char* get_mime_type(const char* filename) {
     return "application/octet-stream";
 }
 
-/**
- * Validate path for security (Directory Traversal Prevention)
- *
- * Checks for dangerous patterns like ../ or ..\ that could allow
- * attackers to access files outside the intended directory.
- *
- * Note: HTTP paths starting with / are normal (e.g., /login, /api/videos)
- * This function checks for directory traversal, not URL format.
- *
- * Returns: 1 if path is safe, 0 if dangerous
- */
-int is_path_safe(const char* path) {
-    if (!path) {
-        return 0;
-    }
-
-    // Check for directory traversal patterns: ../ or ..\ (backslash)
-    if (strstr(path, "../") != NULL || strstr(path, "..\\") != NULL) {
-        fprintf(stderr, "[SECURITY] Directory traversal attempt detected: %s\n", path);
-        return 0;
-    }
-
-    // Check for encoded directory traversal patterns
-    if (strstr(path, "%2e%2e") != NULL || strstr(path, "%2E%2E") != NULL) {
-        fprintf(stderr, "[SECURITY] Encoded directory traversal attempt: %s\n", path);
-        return 0;
-    }
-
-    return 1;  // Path is safe
-}
+// is_path_safe() moved to validation.c for centralized security checks
 
 /**
  * Send 403 Forbidden response

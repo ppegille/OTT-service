@@ -9,6 +9,8 @@
 
 #include "../include/server.h"
 #include "../include/database.h"
+#include "../include/json.h"
+#include "../include/validation.h"
 
 // Shared memory structures
 typedef struct {
@@ -95,7 +97,7 @@ void cleanup_session_store() {
  * Format: 32 hexadecimal characters (128 bits of entropy)
  */
 void generate_session_id(char* session_id) {
-    unsigned char random_bytes[16];  // 128 bits
+    unsigned char random_bytes[SESSION_RANDOM_BYTES];  // 128 bits
     const char* hex_chars = "0123456789abcdef";
 
     // Open /dev/urandom for cryptographically secure random bytes
@@ -104,30 +106,30 @@ void generate_session_id(char* session_id) {
         // Fallback: use time + process ID for less secure but working alternative
         fprintf(stderr, "[WARNING] Cannot open /dev/urandom, using weak fallback\n");
         srand(time(NULL) ^ getpid());
-        for (int i = 0; i < 16; i++) {
-            random_bytes[i] = (unsigned char)(rand() % 256);
+        for (int i = 0; i < SESSION_RANDOM_BYTES; i++) {
+            random_bytes[i] = (unsigned char)(rand() % MAX_RANDOM_BYTE_VALUE);
         }
     } else {
-        // Read 16 random bytes from /dev/urandom
-        size_t bytes_read = fread(random_bytes, 1, 16, urandom);
+        // Read SESSION_RANDOM_BYTES random bytes from /dev/urandom
+        size_t bytes_read = fread(random_bytes, 1, SESSION_RANDOM_BYTES, urandom);
         fclose(urandom);
 
-        if (bytes_read != 16) {
+        if (bytes_read != SESSION_RANDOM_BYTES) {
             fprintf(stderr, "[ERROR] Failed to read from /dev/urandom\n");
             // Fallback to weak randomness
             srand(time(NULL) ^ getpid());
-            for (int i = 0; i < 16; i++) {
-                random_bytes[i] = (unsigned char)(rand() % 256);
+            for (int i = 0; i < SESSION_RANDOM_BYTES; i++) {
+                random_bytes[i] = (unsigned char)(rand() % MAX_RANDOM_BYTE_VALUE);
             }
         }
     }
 
-    // Convert to hexadecimal string (32 chars + null terminator)
-    for (int i = 0; i < 16; i++) {
-        session_id[i * 2] = hex_chars[(random_bytes[i] >> 4) & 0x0F];
-        session_id[i * 2 + 1] = hex_chars[random_bytes[i] & 0x0F];
+    // Convert to hexadecimal string (SESSION_HEX_LENGTH chars + null terminator)
+    for (int i = 0; i < SESSION_RANDOM_BYTES; i++) {
+        session_id[i * HEX_CHARS_PER_BYTE] = hex_chars[(random_bytes[i] >> HEX_SHIFT_HIGH) & 0x0F];
+        session_id[i * HEX_CHARS_PER_BYTE + 1] = hex_chars[random_bytes[i] & 0x0F];
     }
-    session_id[32] = '\0';
+    session_id[SESSION_HEX_LENGTH] = '\0';
 }
 
 /**
@@ -591,4 +593,57 @@ int get_username_from_session(const char* session_id, char* username_out, size_t
     sem_post(session_sem);
 
     return found ? 0 : -1;
+}
+
+// ============================================================================
+// User Registration Functions
+// ============================================================================
+// Note: parse_json_string, validate_username, validate_password are now
+//       imported from json.h and validation.h modules
+
+/**
+ * Handle user registration request
+ */
+void handle_registration(int client_fd, const char* request_body) {
+    char username[USER_ID_LENGTH];
+    char password[USER_ID_LENGTH];
+
+    printf("  [Registration] Processing registration request\n");
+
+    // Parse JSON body
+    if (parse_json_string(request_body, "username", username, sizeof(username)) != 0) {
+        send_json_error(client_fd, 400, "Invalid JSON: missing username");
+        return;
+    }
+
+    if (parse_json_string(request_body, "password", password, sizeof(password)) != 0) {
+        send_json_error(client_fd, 400, "Invalid JSON: missing password");
+        return;
+    }
+
+    printf("  [Registration] Username: %s\n", username);
+
+    // Validate username (validation.h returns bool: true = valid, false = invalid)
+    if (!validate_username(username)) {
+        send_json_error(client_fd, 400, "Invalid username: must be 2-63 chars, alphanumeric + underscore only");
+        return;
+    }
+
+    // Validate password (validation.h returns bool: true = valid, false = invalid)
+    if (!validate_password(password)) {
+        send_json_error(client_fd, 400, "Invalid password: must be 8+ chars with letters and numbers");
+        return;
+    }
+
+    // Create user in database
+    int result = create_user(username, password);
+
+    if (result == 0) {
+        printf("  [Registration] ✅ User created successfully: %s\n", username);
+        send_json_response(client_fd, "{\"status\":\"success\",\"message\":\"Registration successful\"}");
+    } else {
+        // Check if it's a duplicate username error
+        fprintf(stderr, "  [Registration] ❌ Failed to create user: %s\n", username);
+        send_json_error(client_fd, 409, "Username already exists");
+    }
 }

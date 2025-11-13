@@ -4,17 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hoflix - Login</title>
+    <link rel="stylesheet" href="/css/common.css">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        /* Login Page Specific Styles */
         body {
-            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            background: #141414;
-            min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -46,12 +39,9 @@
             z-index: 10;
         }
 
-        .logo {
+        .header .logo {
             font-size: 42px;
-            font-weight: 700;
-            color: #E50914;
             letter-spacing: -2px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
         }
 
         .login-container {
@@ -79,49 +69,9 @@
             display: none;
         }
 
-        input[type="text"],
-        input[type="password"] {
-            width: 100%;
-            padding: 16px 20px;
-            background: #333;
-            border: none;
-            border-radius: 4px;
-            color: #fff;
-            font-size: 16px;
-            outline: none;
-            transition: all 0.2s;
-        }
-
-        input[type="text"]:focus,
-        input[type="password"]:focus {
-            background: #454545;
-        }
-
-        input[type="text"]::placeholder,
-        input[type="password"]::placeholder {
-            color: #8c8c8c;
-        }
-
         .login-btn {
             width: 100%;
-            padding: 16px;
-            background: #E50914;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: 600;
             margin-top: 24px;
-            transition: background 0.2s;
-        }
-
-        .login-btn:hover {
-            background: #f40612;
-        }
-
-        .login-btn:active {
-            background: #b20710;
         }
 
         .info-text {
@@ -191,6 +141,21 @@
         .demo-info strong {
             color: #fff;
         }
+
+        /* Registration Modal - Form Specific */
+        #registerForm input {
+            margin-bottom: 15px;
+        }
+
+        #registerForm button {
+            width: 100%;
+        }
+
+        .password-hint {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
@@ -225,7 +190,7 @@
                 >
             </div>
 
-            <button type="submit" class="login-btn">로그인</button>
+            <button type="submit" class="btn-primary login-btn">로그인</button>
 
             <div class="demo-info">
                 <p><strong>데모 계정:</strong></p>
@@ -235,6 +200,10 @@
 
             <p class="info-text">
                 Hoflix에서 다양한 비디오를 스트리밍하세요.
+            </p>
+
+            <p class="info-text">
+                계정이 없으신가요? <a href="#" id="registerLink">회원가입</a>
             </p>
 
             <div class="help-text">
@@ -249,24 +218,22 @@
         </form>
     </div>
 
+    <script src="/js/utils.js"></script>
     <script>
-        // Client-side validation
+        // Client-side validation using utils
         document.getElementById('loginForm').addEventListener('submit', function(e) {
-            const username = document.getElementById('username').value.trim();
+            const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
 
-            if (username.length === 0) {
+            // Validate username
+            const usernameCheck = validateUsername(username);
+            if (!usernameCheck.valid) {
                 e.preventDefault();
-                alert('사용자 이름을 입력해주세요');
+                alert(usernameCheck.message);
                 return false;
             }
 
-            if (username.length < 2) {
-                e.preventDefault();
-                alert('사용자 이름은 최소 2글자 이상이어야 합니다');
-                return false;
-            }
-
+            // Validate password (basic check)
             if (password.length === 0) {
                 e.preventDefault();
                 alert('비밀번호를 입력해주세요');
@@ -279,12 +246,99 @@
                 return false;
             }
 
-            console.log('Logging in as:', username);
+            log('Logging in as:', username);
         });
 
         // Auto-focus on username field
         window.addEventListener('load', function() {
             document.getElementById('username').focus();
+        });
+
+        // Initialize registration modal
+        initModal(
+            'registerModal',
+            '#registerLink',
+            '.close',
+            null, // onOpen
+            function() { // onClose
+                document.getElementById('registerForm').reset();
+                document.getElementById('registerError').classList.remove('show');
+            }
+        );
+    </script>
+
+    <!-- Registration Modal -->
+    <div id="registerModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>회원가입</h2>
+            <form id="registerForm">
+                <input type="text" id="reg_username" placeholder="사용자 이름 (영문, 숫자, 언더스코어)" required autocomplete="off">
+                <div class="password-hint">비밀번호는 8자 이상, 영문+숫자 필수</div>
+                <input type="password" id="reg_password" placeholder="비밀번호" required autocomplete="new-password">
+                <input type="password" id="reg_password_confirm" placeholder="비밀번호 확인" required autocomplete="new-password">
+                <button type="submit" class="btn-primary">가입하기</button>
+            </form>
+            <p id="registerError" class="error-message"></p>
+        </div>
+    </div>
+
+    <script>
+
+        // Registration Form Submit with utils validation
+        document.getElementById('registerForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const username = document.getElementById('reg_username').value;
+            const password = document.getElementById('reg_password').value;
+            const confirm = document.getElementById('reg_password_confirm').value;
+            const errorMsg = document.getElementById('registerError');
+
+            // Hide previous errors
+            errorMsg.classList.remove('show');
+
+            // Validate using utility functions
+            const usernameCheck = validateUsername(username);
+            if (!usernameCheck.valid) {
+                errorMsg.textContent = usernameCheck.message;
+                errorMsg.classList.add('show');
+                return;
+            }
+
+            const passwordCheck = validatePassword(password);
+            if (!passwordCheck.valid) {
+                errorMsg.textContent = passwordCheck.message;
+                errorMsg.classList.add('show');
+                return;
+            }
+
+            const matchCheck = validatePasswordMatch(password, confirm);
+            if (!matchCheck.valid) {
+                errorMsg.textContent = matchCheck.message;
+                errorMsg.classList.add('show');
+                return;
+            }
+
+            // API Request using utility function
+            try {
+                const data = await apiPost('/api/register', {
+                    username: username.trim(),
+                    password
+                });
+
+                alert('회원가입 성공! 로그인해주세요.');
+                const modal = document.getElementById('registerModal');
+                modal.style.display = 'none';
+                document.getElementById('registerForm').reset();
+
+                // Auto-fill username in login form
+                document.getElementById('username').value = username.trim();
+                document.getElementById('password').focus();
+            } catch (error) {
+                errorMsg.textContent = error.message || '서버 연결 실패';
+                errorMsg.classList.add('show');
+                logError('Registration error:', error);
+            }
         });
     </script>
 </body>

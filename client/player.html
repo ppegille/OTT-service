@@ -4,46 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hoflix - Watch</title>
+    <link rel="stylesheet" href="/css/common.css">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            background: #141414;
-            color: #fff;
-            min-height: 100vh;
-        }
-
-        /* Navigation Bar */
-        .navbar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 70px;
-            background: linear-gradient(180deg, rgba(0, 0, 0, 0.7) 10%, transparent);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 60px;
-            z-index: 100;
-            transition: background 0.3s;
-        }
-
-        .navbar.scrolled {
-            background: #141414;
-        }
-
+        /* Player Page Specific Styles */
         .navbar .logo {
             font-size: 28px;
-            font-weight: 700;
-            color: #E50914;
-            letter-spacing: -1px;
-            cursor: pointer;
         }
 
         .back-btn {
@@ -138,18 +103,18 @@
             font-family: 'Courier New', monospace;
         }
 
-        /* Resume Dialog */
+        /* Resume Dialog - Player Specific */
         .dialog-overlay {
+            display: none;
             position: fixed;
             top: 0;
             left: 0;
-            right: 0;
-            bottom: 0;
+            width: 100%;
+            height: 100%;
             background: rgba(0, 0, 0, 0.85);
-            display: none;
-            align-items: center;
-            justify-content: center;
             z-index: 1000;
+            justify-content: center;
+            align-items: center;
         }
 
         .dialog-overlay.show {
@@ -159,28 +124,24 @@
         .dialog {
             background: #181818;
             border-radius: 6px;
-            padding: 40px;
             max-width: 480px;
-            width: 90%;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            padding: 40px;
+            border: 1px solid #333;
         }
 
         .dialog h2 {
-            color: #e5e5e5;
-            font-size: 28px;
             font-weight: 500;
             margin-bottom: 20px;
         }
 
         .dialog p {
-            color: #b3b3b3;
             font-size: 16px;
             margin-bottom: 30px;
             line-height: 1.6;
         }
 
         .dialog p strong {
-            color: #E50914;
+            color: var(--hoflix-red);
             font-weight: 600;
         }
 
@@ -191,31 +152,6 @@
 
         .dialog-buttons button {
             flex: 1;
-            padding: 14px 24px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: 600;
-            transition: all 0.2s;
-        }
-
-        .btn-primary {
-            background: #E50914;
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: #f40612;
-        }
-
-        .btn-secondary {
-            background: rgba(109, 109, 110, 0.7);
-            color: white;
-        }
-
-        .btn-secondary:hover {
-            background: rgba(109, 109, 110, 0.9);
         }
 
         /* Saved Indicator */
@@ -249,12 +185,8 @@
             font-size: 16px;
         }
 
-        /* Responsive */
+        /* Player Responsive Overrides */
         @media (max-width: 768px) {
-            .navbar {
-                padding: 0 20px;
-            }
-
             .video-title {
                 padding: 15px 20px;
                 font-size: 20px;
@@ -267,16 +199,10 @@
             .stats-grid {
                 grid-template-columns: 1fr;
             }
-
-            .dialog {
-                padding: 30px 20px;
-            }
-
-            .dialog h2 {
-                font-size: 22px;
-            }
         }
     </style>
+    <!-- HLS.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 </head>
 <body>
     <!-- Saved Position Indicator -->
@@ -335,6 +261,27 @@
                         <div class="stat-value" id="progress">0%</div>
                     </div>
                     <div class="stat-item">
+                        <div class="stat-label">재생 속도</div>
+                        <div class="stat-value">
+                            <select id="playbackSpeed" onchange="changePlaybackSpeed(this.value)" style="padding: 5px; border-radius: 4px; border: 1px solid #404040; background: #2a2a2a; color: #e5e5e5; cursor: pointer;">
+                                <option value="0.5">0.5x</option>
+                                <option value="0.75">0.75x</option>
+                                <option value="1" selected>정상 (1x)</option>
+                                <option value="1.25">1.25x</option>
+                                <option value="1.5">1.5x</option>
+                                <option value="2">2x</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">화면 모드</div>
+                        <div class="stat-value">
+                            <button id="pipButton" onclick="togglePictureInPicture()" style="padding: 8px 16px; border-radius: 4px; border: 1px solid #404040; background: #2a2a2a; color: #e5e5e5; cursor: pointer; font-size: 14px;">
+                                📺 PiP 모드
+                            </button>
+                        </div>
+                    </div>
+                    <div class="stat-item">
                         <div class="stat-label">마지막 저장</div>
                         <div class="stat-value" id="lastSaved">-</div>
                     </div>
@@ -343,40 +290,64 @@
         </div>
     </div>
 
+    <script src="/js/utils.js"></script>
     <script>
         const player = document.getElementById('player');
-        const urlParams = new URLSearchParams(window.location.search);
-        const videoId = parseInt(urlParams.get('video_id'));
-        const filename = urlParams.get('filename');
+        const videoId = parseInt(getUrlParam('video_id'));
+        const filename = getUrlParam('filename');
 
         let lastPosition = 0;
         let saveInterval = null;
 
-        // Navbar scroll effect
-        window.addEventListener('scroll', () => {
-            const navbar = document.getElementById('navbar');
-            if (window.scrollY > 50) {
-                navbar.classList.add('scrolled');
-            } else {
-                navbar.classList.remove('scrolled');
-            }
-        });
+        // Initialize navbar scroll effect
+        initNavbarScroll('navbar', 50);
 
-        // Format time (seconds → MM:SS)
-        function formatTime(seconds) {
-            if (isNaN(seconds) || seconds === 0) return '0:00';
-            const mins = Math.floor(seconds / 60);
-            const secs = Math.floor(seconds % 60);
-            return `${mins}:${String(secs).padStart(2, '0')}`;
+        // Change playback speed
+        function changePlaybackSpeed(speed) {
+            const player = document.getElementById('player');
+            player.playbackRate = parseFloat(speed);
+            console.log(`Playback speed changed to ${speed}x`);
         }
 
-        // Show saved indicator
+        // Toggle Picture-in-Picture mode
+        async function togglePictureInPicture() {
+            const player = document.getElementById('player');
+            const button = document.getElementById('pipButton');
+
+            try {
+                if (document.pictureInPictureElement) {
+                    // Exit PiP mode
+                    await document.exitPictureInPicture();
+                    button.textContent = '📺 PiP 모드';
+                    console.log('Exited Picture-in-Picture mode');
+                } else {
+                    // Enter PiP mode
+                    if (document.pictureInPictureEnabled) {
+                        await player.requestPictureInPicture();
+                        button.textContent = '📺 PiP 종료';
+                        console.log('Entered Picture-in-Picture mode');
+                    } else {
+                        alert('Picture-in-Picture 모드를 사용할 수 없습니다.');
+                    }
+                }
+            } catch (error) {
+                console.error('PiP error:', error);
+                alert('Picture-in-Picture 모드 전환 중 오류가 발생했습니다.');
+            }
+        }
+
+        // Listen for PiP events
+        document.getElementById('player').addEventListener('enterpictureinpicture', () => {
+            document.getElementById('pipButton').textContent = '📺 PiP 종료';
+        });
+
+        document.getElementById('player').addEventListener('leavepictureinpicture', () => {
+            document.getElementById('pipButton').textContent = '📺 PiP 모드';
+        });
+
+        // Show saved indicator (using utility function)
         function showSavedIndicator() {
-            const indicator = document.getElementById('savedIndicator');
-            indicator.classList.add('show');
-            setTimeout(() => {
-                indicator.classList.remove('show');
-            }, 2000);
+            showNotification('시청 위치 저장됨', 'success', 2000);
         }
 
         // Save watch progress
@@ -440,19 +411,116 @@
             player.play().catch(e => console.log('Auto-play blocked'));
         }
 
-        // Initialize video player
-        function initializePlayer() {
+        // Initialize HLS player
+        let hls = null;
+
+        async function checkHLSAvailability() {
+            if (!videoId) return null;
+
+            try {
+                const response = await fetch(`/api/hls/status/${videoId}`);
+                const data = await response.json();
+
+                if (data.status === 'ready' && data.hls_path) {
+                    return `/${data.hls_path}`;
+                }
+            } catch (error) {
+                console.log('HLS not available, using direct streaming');
+            }
+
+            return null;
+        }
+
+        function setupHLSPlayer(hlsUrl) {
+            if (Hls.isSupported()) {
+                hls = new Hls({
+                    debug: false,
+                    enableWorker: true,
+                    lowLatencyMode: true,
+                    backBufferLength: 90
+                });
+
+                hls.loadSource(hlsUrl);
+                hls.attachMedia(player);
+
+                hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                    console.log('✅ HLS stream loaded, quality levels:', hls.levels.length);
+                    player.play().catch(e => console.log('Auto-play blocked'));
+                });
+
+                hls.on(Hls.Events.ERROR, function(event, data) {
+                    if (data.fatal) {
+                        console.error('❌ HLS fatal error:', data);
+                        switch(data.type) {
+                            case Hls.ErrorTypes.NETWORK_ERROR:
+                                console.log('Network error, trying to recover...');
+                                hls.startLoad();
+                                break;
+                            case Hls.ErrorTypes.MEDIA_ERROR:
+                                console.log('Media error, trying to recover...');
+                                hls.recoverMediaError();
+                                break;
+                            default:
+                                console.log('Cannot recover, falling back to MP4');
+                                setupMP4Player();
+                                break;
+                        }
+                    }
+                });
+
+                console.log('🎬 HLS player initialized');
+                return true;
+            } else if (player.canPlayType('application/vnd.apple.mpegurl')) {
+                // Native HLS support (Safari)
+                player.src = hlsUrl;
+                console.log('🎬 Using native HLS support');
+                return true;
+            }
+
+            return false;
+        }
+
+        function setupMP4Player() {
             if (!filename) {
                 alert('비디오 파일이 지정되지 않았습니다.');
                 window.location.href = '/';
                 return;
             }
 
+            // Clear any existing HLS instance
+            if (hls) {
+                hls.destroy();
+                hls = null;
+            }
+
             // Set video source
-            const source = document.createElement('source');
-            source.src = `/videos/${filename}`;
-            source.type = 'video/mp4';
-            player.appendChild(source);
+            const videoUrl = `/videos/${filename}`;
+            console.log('🎬 Setting video source:', videoUrl);
+            player.src = videoUrl;
+            console.log('🎬 Direct MP4 streaming initialized');
+        }
+
+        // Initialize video player
+        async function initializePlayer() {
+            if (!filename) {
+                alert('비디오 파일이 지정되지 않았습니다.');
+                window.location.href = '/';
+                return;
+            }
+
+            // Try HLS first
+            const hlsUrl = await checkHLSAvailability();
+            if (hlsUrl) {
+                console.log('📡 HLS available, using adaptive streaming');
+                if (!setupHLSPlayer(hlsUrl)) {
+                    console.log('HLS not supported, falling back to MP4');
+                    setupMP4Player();
+                }
+            } else {
+                // Fallback to direct MP4 streaming
+                console.log('📺 Using direct MP4 streaming');
+                setupMP4Player();
+            }
 
             // Set title (remove extension)
             const title = decodeURIComponent(filename).replace(/\.[^/.]+$/, '');

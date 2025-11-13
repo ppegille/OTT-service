@@ -1,15 +1,21 @@
 /*
- * OTT Streaming Server - Enhancement Phase 3
+ * OTT Streaming Server - Enhancement Phase 3 (Refactored)
  *
  * HTTP server with video gallery and watch history tracking
+ * Refactored with table-driven routing system
+ *
  * Author: Generated for Network Programming Final Project
  * Date: 2025-11-03
+ * Refactored: 2025-11-13
  */
 
 #include "../include/server.h"
 #include "../include/database.h"
 #include "../include/json.h"
+#include "../include/routes.h"
 #include "../include/video_scanner.h"
+#include "../include/ffmpeg_utils.h"
+#include "../include/validation.h"
 #include <signal.h>
 #include <sys/wait.h>
 
@@ -175,205 +181,35 @@ int main() {
                 exit(0);
             }
 
-            // Handle POST /login (authentication endpoint)
-            if (strcmp(req.method, "POST") == 0 && strcmp(req.path, "/login") == 0) {
-                printf("  [DEBUG] POST /login received\n");
-                // Find request body (after \r\n\r\n)
-                const char* body = strstr(buffer, "\r\n\r\n");
-                if (body) {
-                    body += 4;  // Skip \r\n\r\n
-                    printf("  [DEBUG] Body found, calling handle_login\n");
-                    handle_login(client_fd, body);
-                } else {
-                    printf("  [DEBUG] No body found, redirecting to login\n");
-                    redirect_to_login(client_fd);
-                }
-                close(client_fd);
-                printf("  [Child %d] Connection closed\n\n", getpid());
-                exit(0);
-            }
-
-            // Handle GET /login (serve login page - no session required)
-            if (strcmp(req.method, "GET") == 0 && strcmp(req.path, "/login") == 0) {
-                req.range = (Range){0, 0, 0};
-                stream_file(client_fd, "../client/login.html", req.range);
-                close(client_fd);
-                printf("  [Child %d] Connection closed\n\n", getpid());
-                exit(0);
-            }
-
-            // For all other requests, check session
-            char cookie_header[256];
+            // Parse session from Cookie header
+            char cookie_header[MAX_COOKIE_LEN];
             char session_id[SESSION_ID_LENGTH];
 
             if (!find_header(buffer, "Cookie", cookie_header, sizeof(cookie_header))) {
                 cookie_header[0] = '\0';
             }
-            printf("  [DEBUG] Cookie header: '%s'\n", cookie_header[0] ? cookie_header : "(null)");
 
             if (!parse_cookie(cookie_header, session_id, sizeof(session_id))) {
                 session_id[0] = '\0';
             }
-            printf("  [DEBUG] Parsed session_id: '%s'\n", session_id[0] ? session_id : "(null)");
 
-            if (!validate_session(session_id)) {
-                // No valid session - redirect to login
-                printf("  [Child %d] No valid session, redirecting to login\n", getpid());
-                redirect_to_login(client_fd);
-                close(client_fd);
-                printf("  [Child %d] Connection closed\n\n", getpid());
-                exit(0);
-            }
-
-            // Valid session - refresh it and serve requested content
-            refresh_session(session_id);
-            printf("  [Child %d] Valid session: %s\n", getpid(), session_id);
-
-            // Handle API endpoints (Phase 3)
-            // GET /api/videos - Return list of videos with watch history
-            if (strcmp(req.method, "GET") == 0 && strcmp(req.path, "/api/videos") == 0) {
-                char json_output[8192];
-
-                // Get user_id from session
-                int user_id = get_user_id_from_session(session_id);
-
-                if (user_id < 0) {
-                    send_json_error(client_fd, 401, "Unauthorized: Invalid session");
-                } else if (get_videos_with_history(user_id, json_output, sizeof(json_output)) == 0) {
-                    send_json_response(client_fd, json_output);
-                } else {
-                    send_json_error(client_fd, 500, "Internal server error");
-                }
-
-                close(client_fd);
-                printf("  [Child %d] Connection closed\n\n", getpid());
-                exit(0);
-            }
-
-            // GET /api/user - Return current user information
-            if (strcmp(req.method, "GET") == 0 && strcmp(req.path, "/api/user") == 0) {
-                char username[USER_ID_LENGTH];
-
-                if (get_username_from_session(session_id, username, sizeof(username)) == 0) {
-                    char json_output[256];
-                    snprintf(json_output, sizeof(json_output),
-                             "{\"username\":\"%s\"}", username);
-                    send_json_response(client_fd, json_output);
-                } else {
-                    send_json_error(client_fd, 401, "Unauthorized: Invalid session");
-                }
-
-                close(client_fd);
-                printf("  [Child %d] Connection closed\n\n", getpid());
-                exit(0);
-            }
-
-            // POST /api/watch-progress - Update watch position
-            if (strcmp(req.method, "POST") == 0 && strcmp(req.path, "/api/watch-progress") == 0) {
-                // Get user_id from session
-                int user_id = get_user_id_from_session(session_id);
-
-                if (user_id < 0) {
-                    send_json_error(client_fd, 401, "Unauthorized: Invalid session");
-                } else {
-                    // Find request body
-                    const char* body = strstr(buffer, "\r\n\r\n");
-                    if (body) {
-                        body += 4;  // Skip \r\n\r\n
-
-                        // Parse JSON body
-                        int video_id = parse_json_int(body, "video_id");
-                        int position = parse_json_int(body, "position");
-
-                        if (video_id > 0 && position >= 0) {
-                            if (update_watch_position(user_id, video_id, position) == 0) {
-                                send_json_response(client_fd, "{\"status\":\"success\"}");
-                                printf("  [API] Watch position updated: user=%d, video=%d, pos=%d\n",
-                                       user_id, video_id, position);
-                            } else {
-                                send_json_error(client_fd, 500, "Failed to update watch position");
-                            }
-                        } else {
-                            send_json_error(client_fd, 400, "Invalid video_id or position");
-                        }
-                    } else {
-                        send_json_error(client_fd, 400, "Missing request body");
-                    }
-                }
-
-                close(client_fd);
-                printf("  [Child %d] Connection closed\n\n", getpid());
-                exit(0);
-            }
-
-            // GET /api/watch-history/:video_id - Get watch history for specific video
-            if (strcmp(req.method, "GET") == 0 && strncmp(req.path, "/api/watch-history/", 19) == 0) {
-                // Get user_id from session
-                int user_id = get_user_id_from_session(session_id);
-
-                if (user_id < 0) {
-                    send_json_error(client_fd, 401, "Unauthorized: Invalid session");
-                } else {
-                    // Extract video_id from path
-                    int video_id = atoi(req.path + 19);
-
-                    if (video_id > 0) {
-                        char json_output[512];
-                        if (get_watch_history_json(user_id, video_id, json_output, sizeof(json_output)) == 0) {
-                            send_json_response(client_fd, json_output);
-                        } else {
-                            send_json_error(client_fd, 500, "Failed to get watch history");
-                        }
-                    } else {
-                        send_json_error(client_fd, 400, "Invalid video_id");
-                    }
-                }
-
-                close(client_fd);
-                printf("  [Child %d] Connection closed\n\n", getpid());
-                exit(0);
-            }
-
-            // Determine filename
-            char video_path[MAX_PATH];
-            char thumbnail_path[MAX_PATH];
-            char css_path[MAX_PATH];
-            char js_path[MAX_PATH];
-            char client_path[MAX_PATH];
-
-            const char* filename;
-            if (strcmp(req.path, "/") == 0) {
-                // Default page: Video Gallery (Phase 3)
-                filename = "../client/gallery.html";
-            } else if (strncmp(req.path, "/videos/", 8) == 0) {
-                snprintf(video_path, MAX_PATH, "../%s", req.path + 1);
-                filename = video_path;
-            } else if (strncmp(req.path, "/thumbnails/", 12) == 0) {
-                // Serve thumbnail images (stored in server/thumbnails/)
-                snprintf(thumbnail_path, MAX_PATH, "%s", req.path + 1);
-                filename = thumbnail_path;
-            } else if (strncmp(req.path, "/css/", 5) == 0) {
-                snprintf(css_path, MAX_PATH, "../client/%s", req.path + 1);
-                filename = css_path;
-            } else if (strncmp(req.path, "/js/", 4) == 0) {
-                snprintf(js_path, MAX_PATH, "../client/%s", req.path + 1);
-                filename = js_path;
+            // Validate and refresh session (if present)
+            if (session_id[0] != '\0' && validate_session(session_id)) {
+                refresh_session(session_id);
+                printf("  [Child %d] Valid session: %s\n", getpid(), session_id);
             } else {
-                // Try to serve from client directory
-                snprintf(client_path, MAX_PATH, "../client%s", req.path);
-                filename = client_path;
+                session_id[0] = '\0';  // Clear invalid session
             }
 
-            // Check for Range header
-            char range_header[256];
-            if (find_header(buffer, "Range", range_header, sizeof(range_header))) {
-                req.range = parse_range(range_header);
+            // Dispatch request to appropriate route handler
+            if (dispatch_route(client_fd, &req, session_id, buffer)) {
+                // Route was handled successfully
+                printf("  [Child %d] Route handled successfully\n", getpid());
             } else {
-                req.range = parse_range(NULL);
+                // No matching route found - send 404
+                printf("  [Child %d] No matching route for %s %s\n", getpid(), req.method, req.path);
+                send_404(client_fd);
             }
-
-            // Stream the file
-            stream_file(client_fd, filename, req.range);
 
             // Close connection and exit child process
             close(client_fd);

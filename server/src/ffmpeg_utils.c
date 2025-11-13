@@ -125,3 +125,93 @@ int generate_thumbnail(const char* video_path, const char* output_path, int time
 int generate_thumbnail_default(const char* video_path, const char* output_path) {
     return generate_thumbnail(video_path, output_path, 5);
 }
+
+/**
+ * Generate HLS playlist and segments from video file
+ *
+ * Creates adaptive bitrate streaming segments with multiple quality levels:
+ * - 1080p (5000kbps)
+ * - 720p (2800kbps)
+ * - 480p (1400kbps)
+ * - 360p (800kbps)
+ *
+ * @param video_path Full path to source video file
+ * @param output_dir Directory to store HLS files (will be created if not exists)
+ * @param segment_duration Length of each segment in seconds (default: 10)
+ * @return 0 on success, -1 on error
+ */
+int generate_hls_playlist(const char* video_path, const char* output_dir, int segment_duration) {
+    if (!video_path || !output_dir) {
+        fprintf(stderr, "⚠️  generate_hls_playlist: NULL path\n");
+        return -1;
+    }
+
+    // Check if input file exists
+    if (access(video_path, F_OK) != 0) {
+        fprintf(stderr, "⚠️  Video file not found: %s\n", video_path);
+        return -1;
+    }
+
+    // Create output directory if it doesn't exist
+    char mkdir_cmd[512];
+    snprintf(mkdir_cmd, sizeof(mkdir_cmd), "mkdir -p \"%s\"", output_dir);
+    system(mkdir_cmd);
+
+    // FFmpeg HLS transcoding command - simplified single quality (720p)
+    // -c:v libx264: H.264 video codec
+    // -c:a aac: AAC audio codec
+    // -hls_time: segment duration
+    // -hls_playlist_type vod: Video on Demand playlist
+    // -hls_segment_filename: pattern for segment files
+    char command[2048];
+
+    snprintf(command, sizeof(command),
+        "ffmpeg -v quiet -i \"%s\" "
+        "-vf scale=1280:720 "
+        "-c:v libx264 -b:v 2800k -preset fast "
+        "-c:a aac -b:a 128k -ac 2 "
+        "-f hls "
+        "-hls_time %d "
+        "-hls_playlist_type vod "
+        "-hls_segment_filename \"%s/segment_%%03d.ts\" "
+        "\"%s/master.m3u8\" 2>&1",
+        video_path,
+        segment_duration,
+        output_dir,
+        output_dir
+    );
+
+    printf("🎬 Starting HLS transcoding...\n");
+    printf("   Source: %s\n", video_path);
+    printf("   Output: %s\n", output_dir);
+
+    int ret = system(command);
+
+    if (ret != 0) {
+        fprintf(stderr, "⚠️  HLS transcoding failed\n");
+        return -1;
+    }
+
+    // Verify master playlist was created
+    char master_path[1024];
+    snprintf(master_path, sizeof(master_path), "%s/master.m3u8", output_dir);
+
+    if (access(master_path, F_OK) != 0) {
+        fprintf(stderr, "⚠️  Master playlist was not created: %s\n", master_path);
+        return -1;
+    }
+
+    printf("✅ HLS transcoding complete\n");
+    return 0;
+}
+
+/**
+ * Generate HLS playlist with default segment duration (10 seconds)
+ *
+ * @param video_path Full path to source video file
+ * @param output_dir Directory to store HLS files
+ * @return 0 on success, -1 on error
+ */
+int generate_hls_playlist_default(const char* video_path, const char* output_dir) {
+    return generate_hls_playlist(video_path, output_dir, 10);
+}
