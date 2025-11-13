@@ -94,6 +94,7 @@ static Route routes[] = {
     {"GET", "/api/hls/status/", handle_get_hls_status, 1, 1},  // prefix match
 
     // Static file serving
+    {"GET", "/login.html", handle_static_file, 0, 0},  // Login page (no auth required)
     {"GET", "/player.html", handle_static_file, 1, 0},
     {"GET", "/gallery.html", handle_static_file, 1, 0},
     {"GET", "/css/", handle_static_file, 0, 1},  // CSS files (no auth required)

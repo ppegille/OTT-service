@@ -254,17 +254,19 @@
             document.getElementById('username').focus();
         });
 
-        // Initialize registration modal
-        initModal(
-            'registerModal',
-            '#registerLink',
-            '.close',
-            null, // onOpen
-            function() { // onClose
-                document.getElementById('registerForm').reset();
-                document.getElementById('registerError').classList.remove('show');
-            }
-        );
+        // Initialize registration modal after DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            initModal(
+                'registerModal',
+                '#registerLink',
+                '.close',
+                null, // onOpen
+                function() { // onClose
+                    document.getElementById('registerForm').reset();
+                    document.getElementById('registerError').classList.remove('show');
+                }
+            );
+        });
     </script>
 
     <!-- Registration Modal -->
